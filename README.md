@@ -24,3 +24,8 @@ This is a comprehensive wish list, doesn't mean they will all come to life :D
 1. ESP32-S2/3
 2. RPI Pico W or RPI Pico 2
 3. Waveshare ePaper Touch 2.13" and 2.9" (GT1151N and ICNT86X touch sensors)
+
+### References
+1. Waveshare 2.13" schematic https://files.waveshare.com/upload/1/10/2.13inch_Touch_e-Paper_HAT.pdf
+2. Waveshare ePaper driver ESP32 board https://www.waveshare.com/wiki/E-Paper_ESP32_Driver_Board
+3. Touch sensor datasheets are in the repo
