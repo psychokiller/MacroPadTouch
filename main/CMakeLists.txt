@@ -1,4 +1,15 @@
-idf_component_register(SRCS "MacroPadTouch.c"
-                "touch/GT1151.c"
-                "Utils.c"
-                    INCLUDE_DIRS ".")
+idf_component_register(SRCS "MacroPadTouch.cpp"
+                "touch/GT1151.cpp"
+                "touch/TouchPoint.cpp"
+                "Utils.cpp"
+                "display/ePaper/WaveShare213.cpp"
+                "fonts/font8.cpp"
+                "fonts/font12.cpp"
+                "fonts/font16.cpp"
+                "fonts/font20.cpp"
+                "fonts/font24.cpp"
+                "paint/GUI_Paint.cpp"
+                "graphics/ImageData.cpp"
+                INCLUDE_DIRS "."
+                    )
+
