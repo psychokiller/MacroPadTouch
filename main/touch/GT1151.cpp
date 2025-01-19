@@ -2,6 +2,7 @@
 #include "Config.h"
 
 static const char *TAG = "Touch_Driver";
+TouchPoint touch;
 
 // This is a reset procedure based
 // on both Touch sensors Datasheets
@@ -55,19 +56,19 @@ void init(i2c_master_dev_handle_t *handle)
     vTaskDelay(pdMS_TO_TICKS(100));
 }
 
-TouchPoint scan(i2c_master_dev_handle_t *dev_handle)
+TouchPoint scan(i2c_master_dev_handle_t *i2c_dev_handle)
 {
     uint8_t buff[100];
     uint8_t mask[1] = {0x00};
-    TouchPoint *tp = malloc(sizeof(struct TouchPoint));
+    
 
-    I2C_READ(BASE_COORD_ADDR, buff, 1, dev_handle);
+    I2C_READ(BASE_COORD_ADDR, buff, 1, i2c_dev_handle);
     if ((buff[0] & 0x80) == 0x00)
     {
-        I2C_WRITE(BASE_COORD_ADDR, mask, 1, dev_handle);
+        I2C_WRITE(BASE_COORD_ADDR, mask, 1, i2c_dev_handle);
         vTaskDelay(pdMS_TO_TICKS(1));
         // ESP_LOGI(TAG, " NO TOUCH WAS DETECTED \r\n");
-        return *tp;
+        return touch;
     }
     else
     {
@@ -76,23 +77,23 @@ TouchPoint scan(i2c_master_dev_handle_t *dev_handle)
         if (touchCount > 5 || touchCount < 1)
         {
             ESP_LOGI(TAG, "Touch Count was wrong read again....");
-            I2C_WRITE(BASE_COORD_ADDR, mask, 1, dev_handle);
-            return *tp;
+            I2C_WRITE(BASE_COORD_ADDR, mask, 1, i2c_dev_handle);
+            return touch;
         }
-        I2C_READ(FIRST_COORD_ADDR, &buff[1], touchCount * 8, dev_handle);
-        I2C_WRITE(BASE_COORD_ADDR, mask, 1, dev_handle);
+        I2C_READ(FIRST_COORD_ADDR, &buff[1], touchCount * 8, i2c_dev_handle);
+        I2C_WRITE(BASE_COORD_ADDR, mask, 1, i2c_dev_handle);
         for (int i = 0; i < touchCount; i++)
         {
-            tp->track_id = buff[1 + 8 * i];
-            tp->x = ((uint16_t)buff[3 + 8 * i] << 8) + buff[2 + 8 * i];
-            tp->y = ((uint16_t)buff[5 + 8 * i] << 8) + buff[4 + 8 * i];
-            tp->size = ((uint16_t)buff[7 + 8 * i] << 8) + buff[6 + 8 * i];
+            touch.track_id = buff[1 + 8 * i];
+            touch.x = ((uint16_t)buff[3 + 8 * i] << 8) + buff[2 + 8 * i];
+            touch.y = ((uint16_t)buff[5 + 8 * i] << 8) + buff[4 + 8 * i];
+            touch.size = ((uint16_t)buff[7 + 8 * i] << 8) + buff[6 + 8 * i];
 
-            ESP_LOGI(TAG, "TOUCH WAS DETECTED trackId: %d, x: %d, y: %d, s: %d", tp->track_id, tp->x, tp->y, tp->size);
+            ESP_LOGI(TAG, "TOUCH WAS DETECTED trackId: %d, x: %d, y: %d, s: %d", touch.track_id, touch.x, touch.y, touch.size);
         }
-        return *tp;
+        return touch;
     }
-    return *tp;
+    return touch;
 }
 
 i2c_device_config_t get_device_config()
@@ -103,7 +104,8 @@ i2c_device_config_t get_device_config()
         .dev_addr_length = I2C_ADDR_BIT_LEN_7,
         .device_address = GT1151N_ADDR,
         .scl_speed_hz = I2C_FREQ,
-        .flags.disable_ack_check = false};
+        .flags = {
+            .disable_ack_check = false}};
 
     return slave_dev_cnfg;
 }
