@@ -29,3 +29,36 @@ This is a comprehensive wish list, doesn't mean they will all come to life :D
 1. Waveshare 2.13" schematic https://files.waveshare.com/upload/1/10/2.13inch_Touch_e-Paper_HAT.pdf
 2. Waveshare ePaper driver ESP32 board https://www.waveshare.com/wiki/E-Paper_ESP32_Driver_Board
 3. Touch sensor datasheets are in the repo
+
+## Pin Mappings
+### ESP32 -> RPI 40Pin Connector
+This maps esp32 pins to the 40pin connector pin number, and the GPIO Pin Number
+
+
+| ESP32 Pin | 40 Pin Connector Pin | RPI GPIO Pin | Pin Function |
+|:--:|:--:|:--:|:--:|
+| 26 | 11 | 17 | DISPLAY_RESET |
+| 27 | 22 | 25 | DISPLAY_SPI_DC|
+| 15 | 24 | 8 | DISPLAY_SPI_CS|
+| 25 | 18 | 24 | DISPLAY_BUSY|
+| 21 | 3 | 2 | TOUCH_I2C_SDA |
+| 22 | 5 | 3 | TOUCH_I2C_SCL |
+| 16 | 15 | 22 | TOUCH_RESET|
+| 17 | 13 | 27 | TOUCH_INTERRUPT|
+| 14 | 19 | 10 |  DISPLAY_SPI_MOSI|
+| 13 | 23 | 11 | DISPLAY_SPI_CLK|
+
+### PICO -> RPI 40Pin Connector
+
+| PICO 2 GPIO Pin | 40 Pin Connector Pin | RPI GPIO Pin | Pin Function |
+|:--:|:--:|:--:|:--:|
+| 12 | 11 | 17 | DISPLAY_RESET |
+| 8 | 22 | 25 | DISPLAY_SPI_DC|
+| 9 | 24 | 8 | DISPLAY_SPI_CS|
+| 13 | 18 | 24 | DISPLAY_BUSY|
+| 6 | 3 | 2 | TOUCH_I2C_SDA |
+| 7 | 5 | 3 | TOUCH_I2C_SCL |
+| 16 | 15 | 22 | TOUCH_RESET|
+| 17 | 13 | 27 | TOUCH_INTERRUPT|
+| 11 | 19 | 10 |  DISPLAY_SPI_MOSI|
+| 10 | 23 | 11 | DISPLAY_SPI_CLK|
