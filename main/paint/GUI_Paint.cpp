@@ -178,6 +178,7 @@ parameter:
 void Paint_SetPixel(uint16_t Xpoint, uint16_t Ypoint, display_color Color)
 {
     if(Xpoint > Paint.Width || Ypoint > Paint.Height){
+        ESP_LOGI("SET_PIXEL", "XPoint: %d, YPoint: %d", Xpoint, Ypoint);
         return;
     }      
     uint16_t X, Y;
@@ -224,13 +225,33 @@ void Paint_SetPixel(uint16_t Xpoint, uint16_t Ypoint, display_color Color)
         return;
     }
     
-    uint32_t Addr = X / 8 + Y * Paint.WidthByte;
-    uint8_t Rdata = Paint.Image[Addr];
-    if(Color == BLACK)
-        Paint.Image[Addr] = Rdata & ~(0x80 >> (X % 8));
-    else
-        Paint.Image[Addr] = Rdata | (0x80 >> (X % 8));
+    if (Paint.Scale == 2) {
+        uint32_t Addr = X / 8 + Y * Paint.WidthByte;
+        uint8_t Rdata = Paint.Image[Addr];
+        if(Color == BLACK)
+            Paint.Image[Addr] = Rdata & ~(0x80 >> (X % 8));
+        else
+            Paint.Image[Addr] = Rdata | (0x80 >> (X % 8));
+    } else if(Paint.Scale == 4){
 
+        uint32_t Addr = X / 4 + Y * Paint.WidthByte;
+
+        uint16_t Rdata = Paint.Image[Addr];
+
+        Rdata = Rdata & (~(0xC0 >> ((X % 4)*2)));
+
+        Paint.Image[Addr] = Rdata | ((Color << 6) >> ((X % 4)*2));
+
+    }else if(Paint.Scale == 7 || Paint.Scale == 16){
+
+		uint32_t Addr = X / 2  + Y * Paint.WidthByte;
+
+		uint16_t Rdata = Paint.Image[Addr];
+
+		Rdata = Rdata & (~(0xF0 >> ((X % 2)*4)));//Clear first, then set value
+
+		Paint.Image[Addr] = Rdata | ((Color << 4) >> ((X % 2)*4));
+    } 
 }
 
 /******************************************************************************
@@ -546,7 +567,7 @@ void Paint_DrawString_EN(uint16_t Xstart, uint16_t Ystart, const char * pString,
     uint16_t Ypoint = Ystart;
 
     if (Xstart > Paint.Width || Ystart > Paint.Height) {
-        ESP_LOGI("PAINT", "Paint_DrawString_EN Input exceeds the normal display range\r\n");
+        ESP_LOGI("PAINT", "Paint_DrawString_EN Input exceeds the normal display range\r\nXStart: %d, YStart: %d\r\nPaint.Width: %d, Paint.Height: %d\r\n", Xstart, Ystart, Paint.Width, Paint.Height);
         return;
     }
 
