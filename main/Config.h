@@ -27,9 +27,6 @@ typedef enum {
 #define SPI_CS  GPIO_NUM_15
 #define SPI_DC  GPIO_NUM_27
 
-// Touch driver definition
-#define USE_TOUCH_DRIVER GT1151
-
 // Display SPI Host
 #define DISPLAY_HOST SPI3_HOST
 

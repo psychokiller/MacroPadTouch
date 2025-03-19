@@ -5,64 +5,67 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "driver/gpio.h"
-#ifdef GT1151
 #include "touch/GT1151.h"
-#endif
-
+#include "touch/ICNT86X.h"
 #include "touch/TouchPoint.h"
 #include "Config.h"
 #include "Utils.h"
 #include "display/ePaper/WaveShare213.h"
+#include "display/ePaper/WaveShare29.h"
 #include "driver/spi_master.h"
 #include "paint/GUI_Paint.h"
 #include "graphics/ImageData.h"
+#include "fonts/fonts.h"
 
 i2c_master_dev_handle_t *i2c_dev_handle, i2c_dev;
 
-extern i2c_device_config_t get_device_config();
-extern TouchPoint scan(i2c_master_dev_handle_t *);
 TouchPoint tp;
 
-void setup_i2c_configuration();
+void setup_i2c_configuration(TouchDriver*);
 
 extern "C" void app_main(void)
 {
-    setup_i2c_configuration();
+
+    TouchDriver* touchDriver = new Gt1151();
+    // TouchDriver* touchDriver = new Icnt86x();
+    setup_i2c_configuration(touchDriver);
+    touchDriver->init(i2c_dev_handle);
+    vTaskDelay(pdMS_TO_TICKS(500));
 
     WaveShare213 display = WaveShare213();
+    // WaveShare29 display = WaveShare29();
 
-    display.init(FULL);
+    display.init();
     display.clear(BLACK);
 
     // Create a new image cache
-    uint8_t *BlackImage;
-    uint16_t Imagesize = 16 * 255;
-    if ((BlackImage = (uint8_t *)malloc(Imagesize)) == NULL)
+    uint8_t *BlankDisplayImage;
+    uint16_t Imagesize = display.get_screen_size_bytes(); // should be Display Width * Height (in bytes not pixels)
+    if ((BlankDisplayImage = (uint8_t *)malloc(Imagesize)) == NULL)
     {
         printf("Failed to apply for black memory...\r\n");
         while (1)
             ;
     }
 
-    Paint_NewImage(BlackImage, WIDTH, HEIGHT, 90, WHITE);
+    Paint_NewImage(BlankDisplayImage, display.width, display.height, ROTATE_90, WHITE);
     Paint_Clear(WHITE);
 
-    display.init(FAST);
-    Paint_SelectImage(BlackImage);
-    Paint_Clear(WHITE);
-    Paint_DrawBitMap(gImage_2in13);
+    Paint_DrawString_EN(0,0, "KOKOKOKO", &Font24, WHITE, BLACK);
+    Paint_DrawRectangle(0,0,50,50,BLACK,DOT_PIXEL_2X2, DRAW_FILL_EMPTY);
+    // Paint_DrawBitMap(gImage_2in9);
 
-    display.display_fast(BlackImage);
-    vTaskDelay(pdMS_TO_TICKS(1000));
-
+    display.display(BlankDisplayImage);
+    
     while (true)
     {
-        tp = scan(i2c_dev_handle);
+        tp = touchDriver->scan(i2c_dev_handle);
+        
         // use tp
     }
 }
 
-void setup_i2c_configuration()
+void setup_i2c_configuration(TouchDriver* td)
 {
     // define I2C bus configuration
     i2c_master_bus_config_t master_config = {
@@ -76,7 +79,7 @@ void setup_i2c_configuration()
     i2c_master_bus_handle_t bus_handle;
     i2c_new_master_bus(&master_config, &bus_handle);
 
-    i2c_device_config_t slave_dev_cnfg = get_device_config();
+    i2c_device_config_t slave_dev_cnfg = td->get_device_config();
 
     i2c_dev_handle = &i2c_dev;
 
