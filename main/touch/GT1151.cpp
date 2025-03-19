@@ -1,12 +1,12 @@
 #include "touch/GT1151.h"
 #include "Config.h"
 
-static const char *TAG = "Touch_Driver";
-TouchPoint touch;
+Gt1151::Gt1151(): TouchDriver() {};
+Gt1151::~Gt1151() { };
 
 // This is a reset procedure based
 // on both Touch sensors Datasheets
-void reset()
+void Gt1151::reset()
 {
     gpio_set_level(TOUCH_RST, 1); // HIGH
     vTaskDelay(pdMS_TO_TICKS(100));
@@ -16,12 +16,12 @@ void reset()
     vTaskDelay(pdMS_TO_TICKS(100));
 }
 
-esp_err_t read_product_id(i2c_master_dev_handle_t *handle)
+esp_err_t Gt1151::read_product_id(i2c_master_dev_handle_t *handle)
 {
     uint8_t buff[11];
     uint8_t prod_reg[2];
 
-    convert_registers_to_byte_array(PRODUCT_ID_REG, prod_reg);
+    convert_registers_to_byte_array(productId_reg, prod_reg);
     uint8_t checksum = 0;
 
     if (handle != NULL)
@@ -49,23 +49,23 @@ esp_err_t read_product_id(i2c_master_dev_handle_t *handle)
         return ESP_ERR_INVALID_STATE;
 }
 
-void init(i2c_master_dev_handle_t *handle)
+void Gt1151::init(i2c_master_dev_handle_t *handle)
 {
     reset();
     read_product_id(handle);
     vTaskDelay(pdMS_TO_TICKS(100));
 }
 
-TouchPoint scan(i2c_master_dev_handle_t *i2c_dev_handle)
+TouchPoint Gt1151::scan(i2c_master_dev_handle_t *i2c_dev_handle)
 {
     uint8_t buff[100];
     uint8_t mask[1] = {0x00};
     
 
-    I2C_READ(BASE_COORD_ADDR, buff, 1, i2c_dev_handle);
+    I2C_READ(baseCoordinates_address, buff, 1, i2c_dev_handle);
     if ((buff[0] & 0x80) == 0x00)
     {
-        I2C_WRITE(BASE_COORD_ADDR, mask, 1, i2c_dev_handle);
+        I2C_WRITE(baseCoordinates_address, mask, 1, i2c_dev_handle);
         vTaskDelay(pdMS_TO_TICKS(1));
         // ESP_LOGI(TAG, " NO TOUCH WAS DETECTED \r\n");
         return touch;
@@ -77,11 +77,11 @@ TouchPoint scan(i2c_master_dev_handle_t *i2c_dev_handle)
         if (touchCount > 5 || touchCount < 1)
         {
             ESP_LOGI(TAG, "Touch Count was wrong read again....");
-            I2C_WRITE(BASE_COORD_ADDR, mask, 1, i2c_dev_handle);
+            I2C_WRITE(baseCoordinates_address, mask, 1, i2c_dev_handle);
             return touch;
         }
-        I2C_READ(FIRST_COORD_ADDR, &buff[1], touchCount * 8, i2c_dev_handle);
-        I2C_WRITE(BASE_COORD_ADDR, mask, 1, i2c_dev_handle);
+        I2C_READ(firstCoordinates_address, &buff[1], touchCount * 8, i2c_dev_handle);
+        I2C_WRITE(baseCoordinates_address, mask, 1, i2c_dev_handle);
         for (int i = 0; i < touchCount; i++)
         {
             touch.track_id = buff[1 + 8 * i];
@@ -96,13 +96,13 @@ TouchPoint scan(i2c_master_dev_handle_t *i2c_dev_handle)
     return touch;
 }
 
-i2c_device_config_t get_device_config()
+i2c_device_config_t Gt1151::get_device_config()
 {
     // define the configuration for the I2C device
     // in this case it is the Touch Sensor GT1151N/ICNT86X
     i2c_device_config_t slave_dev_cnfg = {
         .dev_addr_length = I2C_ADDR_BIT_LEN_7,
-        .device_address = GT1151N_ADDR,
+        .device_address = chip_address,
         .scl_speed_hz = I2C_FREQ,
         .flags = {
             .disable_ack_check = false}};

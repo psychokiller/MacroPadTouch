@@ -10,18 +10,31 @@
 #include <string.h>
 #include "Utils.h"
 #include "TouchPoint.h"
+#include "TouchDriver.h"
 
-#define GT1151N_ADDR 0x14
-#define PRODUCT_ID_REG 0x8140
-#define BASE_COORD_ADDR 0x814E
-#define FIRST_COORD_ADDR 0x814F
-#define MAX_TOUCH_POINTS 10
+class Gt1151 : public TouchDriver
+{
+private:
+    const char *TAG = "Touch_Driver_GT1151";
+    const int maxTouchPoints = 10;
+    const uint16_t chip_address = 0x14;
+    const uint16_t productId_reg = 0x8140;
+    const uint16_t baseCoordinates_address = 0x814E;
+    const uint16_t firstCoordinates_address = 0x814F;
+    
+public:
+    TouchPoint touch;
 
-void reset();
-esp_err_t read_product_id(i2c_master_dev_handle_t*);
-void init(i2c_master_dev_handle_t*);
-TouchPoint scan(i2c_master_dev_handle_t*);
+    Gt1151(/* args */);
+    ~Gt1151();
 
-i2c_device_config_t get_device_config();
+    void reset() override;
+    esp_err_t read_product_id(i2c_master_dev_handle_t *) override;
+    void init(i2c_master_dev_handle_t *) override;
+    TouchPoint scan(i2c_master_dev_handle_t *) override;
+
+    i2c_device_config_t get_device_config() override;
+};
+
 
 #endif
