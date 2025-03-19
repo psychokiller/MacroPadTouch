@@ -29,23 +29,14 @@ uint8_t I2C_READ(uint16_t register_address, uint8_t *read_buffer, uint8_t len, i
     I2C_WRITE(register_address, 0, 0, i2c_dev_handle);
 
     esp_err_t result = i2c_master_receive(*i2c_dev_handle, rbuf, len, -1);
-    // ESP_LOGI(TAG, "RESULT: %d", result);
     return result;
 }
 
 void SPI_WRITE(uint8_t data, spi_device_handle_t handle)
 {
-    // ESP_LOGI("UTILS", "DATA %d", data);
+    
     gpio_set_level(SPI_CS, 0);
-    //  for (int i = 0; i < 8; i++)
-    // {
-    //     if ((data & 0x80) == 0) gpio_set_level(SPI_MOSI, 0);
-    //     else                    gpio_set_level(SPI_MOSI, 1);
-
-    //     data <<= 1;
-    //     gpio_set_level(SPI_CLK, 1);
-    //     gpio_set_level(SPI_CLK, 0);
-    // }
+    
     spi_transaction_t t;
     memset(&t, 0, sizeof(t));
     
@@ -54,9 +45,7 @@ void SPI_WRITE(uint8_t data, spi_device_handle_t handle)
     t.tx_data[0] = data;
     t.length = 8;
 
-    // spi_device_polling_start(handle, &t, -1);
     spi_device_polling_transmit(handle, &t);
-    // spi_device_polling_end(handle, -1);
 
     gpio_set_level(SPI_CS, 1);
 }
