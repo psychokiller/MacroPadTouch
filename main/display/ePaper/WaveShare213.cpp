@@ -132,6 +132,11 @@ void WaveShare213::turn_display_on_partial_wait()
     read_busy();
 }
 
+void WaveShare213::init()
+{
+    init(FULL);
+}
+
 void WaveShare213::init(display_refresh_mode mode)
 {
     if (mode == FULL)
@@ -153,7 +158,7 @@ void WaveShare213::init(display_refresh_mode mode)
         send_command(0x11); // data entry mode
         send_data(0x03);
 
-        set_window(0, 0, WIDTH, HEIGHT);
+        set_window(0, 0, width - 1, height -1);
         set_cursor(0, 0);
 
         send_command(0x3C); // BorderWavefrom
@@ -187,7 +192,7 @@ void WaveShare213::init(display_refresh_mode mode)
         send_command(0x11); // data entry mode
         send_data(0x03);
 
-        set_window(0, 0, WIDTH, HEIGHT);
+        set_window(0, 0, width - 1, height - 1);
         set_cursor(0, 0);
     }
     else
@@ -202,7 +207,7 @@ void WaveShare213::init(display_refresh_mode mode)
         send_command(0x11); // data entry mode
         send_data(0x03);
 
-        set_window(0, 0, WIDTH, HEIGHT);
+        set_window(0, 0, width - 1 , height - 1);
         set_cursor(0, 0);
 
         send_command(0x22); // Load temperature value
@@ -225,14 +230,19 @@ void WaveShare213::init(display_refresh_mode mode)
 
 uint16_t WaveShare213::get_screen_width_bytes()
 {
-    return (WIDTH % 8 == 0) ? (WIDTH / 8) : (WIDTH / 8 + 1);
+    return (width % 8 == 0) ? (width / 8) : (width / 8 + 1);
+}
+
+uint16_t WaveShare213::get_screen_size_bytes()
+{
+    return get_screen_width_bytes() * height;
 }
 
 void WaveShare213::clear(display_color color)
 {
     uint16_t Width, Height;
     Width = get_screen_width_bytes();
-    Height = HEIGHT;
+    Height = height;
 
     send_command(0x24);
     for (uint16_t j = 0; j < Height; j++)
@@ -242,7 +252,6 @@ void WaveShare213::clear(display_color color)
             send_data(color);
         }
     }
-
     turn_display_on();
     ESP_LOGI("EPD", "CLEAR with %X", color);
 }
@@ -251,7 +260,7 @@ void WaveShare213::display(uint8_t *image)
 {
     uint16_t Width, Height;
     Width = get_screen_width_bytes();
-    Height = HEIGHT;
+    Height = height;
 
     send_command(0x24);
     for (uint16_t j = 0; j < Height; j++)
@@ -260,7 +269,6 @@ void WaveShare213::display(uint8_t *image)
             send_data(image[i + j * Width]);
         }
     }
-
     turn_display_on();
 }
 
@@ -268,7 +276,7 @@ void WaveShare213::display_fast(uint8_t *image)
 {
     uint16_t Width, Height;
     Width = get_screen_width_bytes();
-    Height = HEIGHT;
+    Height = height;
 
     send_command(0x24);
     for (uint16_t j = 0; j < Height; j++)
@@ -278,7 +286,6 @@ void WaveShare213::display_fast(uint8_t *image)
             send_data(image[i + j * Width]);
         }
     }
-
     turn_display_on_fast();
 }
 
@@ -286,7 +293,7 @@ void WaveShare213::display_base(uint8_t *image)
 {
     uint16_t Width, Height;
     Width = get_screen_width_bytes();
-    Height = HEIGHT;
+    Height = height;
 
     send_command(0x24);
     for (uint16_t j = 0; j < Height; j++)
@@ -303,7 +310,7 @@ void WaveShare213::display_partial(uint8_t *image)
 {
     uint16_t Width, Height;
     Width = get_screen_width_bytes();
-    Height = HEIGHT;
+    Height = height;
 
     init(PARTIAL);
 
@@ -316,7 +323,7 @@ void WaveShare213::display_partial_wait(uint8_t *image)
 {
     uint16_t Width, Height;
     Width = get_screen_width_bytes();
-    Height = HEIGHT;
+    Height = height;
 
     read_busy();
 
