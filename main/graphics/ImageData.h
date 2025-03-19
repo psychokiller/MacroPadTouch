@@ -32,6 +32,7 @@
 #ifndef _IMAGEDATA_H_
 #define _IMAGEDATA_H_
 
+extern unsigned char gImage_2in9[];
 extern unsigned char gImage_2in13[];
 
 #endif
