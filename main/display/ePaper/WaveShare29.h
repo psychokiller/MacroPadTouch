@@ -14,23 +14,18 @@
 #include "soc/gpio_periph.h"
 #include "../DisplayColors.h"
 #include "../DisplayRefreshModes.h"
+#include "Display.h"
 
-class WaveShare29
+class WaveShare29: public Display
 {
 public:
     WaveShare29();
     ~WaveShare29();
-    const uint16_t width = 128;
-    const uint16_t height = 296;
-    const uint16_t total_display_size_bytes = (width * height) / 8;
-    spi_device_handle_t spi_handle;
-    void clear(display_color color);
 
-    void read_busy();
+    void clear(display_color color);
     void turn_display_on();
     void turn_display_on_partial();
     void sleep();
-    void reset();
 
     void init(display_refresh_mode mode);
     void init();
@@ -38,14 +33,15 @@ public:
     void display_base(uint8_t *image);
     void display_partial(uint8_t *image);
     // void display_4Gray(uint8_t *image);
-    void send_command(uint8_t command);
-    void send_data(uint8_t data);
-    void send_data2(uint8_t *data, uint32_t len);
     void set_window(uint16_t x_start, uint16_t y_start, uint16_t x_end, uint16_t y_end);
     void set_cursor(uint16_t x, uint16_t y);
     uint16_t get_screen_size_bytes();
 
 private:
+    static const uint16_t spi_clock_speed = 20000;
+    static const uint16_t width = 128;
+    static const uint16_t height = 296;
+
     uint16_t get_screen_width_bytes();
     void LUT(uint8_t *lut);
     void LutByHost(uint8_t* lut);
