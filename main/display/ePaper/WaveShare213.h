@@ -14,24 +14,21 @@
 #include "soc/gpio_periph.h"
 #include "../DisplayColors.h"
 #include "../DisplayRefreshModes.h"
+#include "Display.h"
 
-class WaveShare213
+class WaveShare213: public Display
 {
 public:
     WaveShare213();
     ~WaveShare213();
-    const uint16_t width = 122;
-    const uint16_t height = 250;
-    spi_device_handle_t spi_handle;
+
     void clear(display_color color);
 
-    void read_busy();
     void turn_display_on();
     void turn_display_on_fast();
     void turn_display_on_partial();
     void turn_display_on_partial_wait();
     void sleep();
-    void reset();
 
     void init();
     void init(display_refresh_mode mode);
@@ -40,15 +37,15 @@ public:
     void display_base(uint8_t *image);
     void display_partial(uint8_t *image);
     void display_partial_wait(uint8_t *image);
-    void send_command(uint8_t command);
-    void send_data(uint8_t data);
-    void send_data2(uint8_t *data, uint32_t len);
     void set_window(uint16_t x_start, uint16_t y_start, uint16_t x_end, uint16_t y_end);
     void set_cursor(uint16_t x, uint16_t y);
     uint16_t get_screen_size_bytes();
 
 private:
     uint16_t get_screen_width_bytes();
+    static const uint16_t spi_clock_speed = 40000;
+    static const uint16_t width = 122; // Portrait orientation
+    static const uint16_t height = 250; // Portrait orientation
 };
 
 #endif

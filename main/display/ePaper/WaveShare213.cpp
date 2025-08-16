@@ -1,81 +1,8 @@
 #include "WaveShare213.h"
 
-WaveShare213::WaveShare213()
+WaveShare213::WaveShare213(): Display(width, height, spi_clock_speed)
 {
-    gpio_set_direction(DISPLAY_BUSY, GPIO_MODE_INPUT);
-    gpio_set_direction(DISPLAY_RST, GPIO_MODE_OUTPUT);
-    gpio_set_direction(SPI_DC, GPIO_MODE_OUTPUT);
-    gpio_set_direction(SPI_CLK, GPIO_MODE_OUTPUT);
-    gpio_set_direction(SPI_CS, GPIO_MODE_OUTPUT);
-    gpio_set_direction(SPI_MOSI, GPIO_MODE_OUTPUT);
-
-    spi_device_interface_config_t spi_config = {
-        .clock_speed_hz = 40000,
-        .spics_io_num = SPI_CS,
-        .queue_size = 1
-    };
-
-    spi_bus_config_t bus_config = {
-        .mosi_io_num = SPI_MOSI,
-        .sclk_io_num = SPI_CLK
-    };
-
-    spi_bus_initialize(DISPLAY_HOST, &bus_config, SPI_DMA_CH_AUTO);
-
-    spi_bus_add_device(DISPLAY_HOST, &spi_config, &spi_handle);
-
-    gpio_set_level(SPI_CS, 1);  // HIGH
-    gpio_set_level(SPI_CLK, 0); // low
 };
-
-void WaveShare213::reset()
-{
-    gpio_set_level(DISPLAY_RST, 1); // HIGH
-    vTaskDelay(pdMS_TO_TICKS(20));
-
-    gpio_set_level(DISPLAY_RST, 0); // LOW
-    vTaskDelay(pdMS_TO_TICKS(2));
-
-    gpio_set_level(DISPLAY_RST, 1); // HIGH
-    vTaskDelay(pdMS_TO_TICKS(20));
-    ESP_LOGI("EPD", "RESET");
-}
-
-void WaveShare213::send_command(uint8_t command)
-{
-    gpio_set_level(SPI_DC, 0);
-    gpio_set_level(SPI_CS, 0);
-    SPI_WRITE(command, spi_handle);
-    gpio_set_level(SPI_CS, 1);
-}
-
-void WaveShare213::send_data(uint8_t data)
-{
-    gpio_set_level(SPI_DC, 1);
-    gpio_set_level(SPI_CS, 0);
-    SPI_WRITE(data, spi_handle);
-    gpio_set_level(SPI_CS, 1);
-}
-
-void WaveShare213::send_data2(uint8_t *data, uint32_t len)
-{
-    gpio_set_level(SPI_DC, 1);
-    gpio_set_level(SPI_CS, 0);
-    SPI_WRITE_N(data, len, spi_handle);
-    gpio_set_level(SPI_CS, 1);
-}
-
-void WaveShare213::read_busy()
-{
-    while (true)
-    {
-        if (gpio_get_level(DISPLAY_BUSY) == 0)
-            break;
-        vTaskDelay(pdMS_TO_TICKS(10));
-    }
-    vTaskDelay(pdMS_TO_TICKS(10));
-    ESP_LOGI("EPD", "READ BUSY");
-}
 
 void WaveShare213::set_window(uint16_t x_start, uint16_t y_start, uint16_t x_end, uint16_t y_end)
 {
@@ -151,9 +78,6 @@ void WaveShare213::init(display_refresh_mode mode)
         send_data(0xF9);
         send_data(0x00);
         send_data(0x00);
-        // send_data(0x27);
-        // send_data(0x01);
-        // send_data(0x00);
 
         send_command(0x11); // data entry mode
         send_data(0x03);

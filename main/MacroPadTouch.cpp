@@ -16,12 +16,17 @@
 #include "paint/GUI_Paint.h"
 #include "graphics/ImageData.h"
 #include "fonts/fonts.h"
+#include "graphics/Button.h"
+#include "ui/UiManager.h"
+#include <string>
+#include<vector>
 
 i2c_master_dev_handle_t *i2c_dev_handle, i2c_dev;
 
 TouchPoint tp;
 
 void setup_i2c_configuration(TouchDriver*);
+void clear_screen(uint8_t *BlankDisplayImage, WaveShare213 &display, display_color color);
 
 extern "C" void app_main(void)
 {
@@ -48,11 +53,26 @@ extern "C" void app_main(void)
             ;
     }
 
-    Paint_NewImage(BlankDisplayImage, display.width, display.height, ROTATE_90, WHITE);
-    Paint_Clear(WHITE);
+    clear_screen(BlankDisplayImage, display, WHITE);
 
-    Paint_DrawString_EN(0,0, "KOKOKOKO", &Font24, WHITE, BLACK);
-    Paint_DrawRectangle(0,0,50,50,BLACK,DOT_PIXEL_2X2, DRAW_FILL_EMPTY);
+    const uint16_t number_of_buttons = 6;
+
+    UiManager* ui = new UiManager(display);
+    std::vector<Button*> buttons;
+    
+
+    // Button** buttons = new Button*[number_of_buttons];
+
+    for (int i = 0; i < number_of_buttons ; i ++) {
+        const char* btn_header = ("KOKO" + std::to_string(i)).c_str();
+        ESP_LOGI("Main", "Btn Header: %s", btn_header);
+        buttons.push_back(new Button(const_cast<char*>( btn_header), &Font20, BLACK, WHITE));
+    }
+
+    ui->draw(buttons);
+
+    // Paint_DrawString_EN(0,0, "KOKOKOKO", &Font24, WHITE, BLACK);
+    // Paint_DrawRectangle(0,0,50,50,BLACK,DOT_PIXEL_2X2, DRAW_FILL_EMPTY);
     // Paint_DrawBitMap(gImage_2in9);
 
     display.display(BlankDisplayImage);
@@ -63,6 +83,14 @@ extern "C" void app_main(void)
         
         // use tp
     }
+}
+
+
+
+void clear_screen(uint8_t *BlankDisplayImage, WaveShare213 &display, display_color color)
+{
+    Paint_NewImage(BlankDisplayImage, display.get_width(), display.get_height(), ROTATE_90, color);
+    Paint_Clear(color);
 }
 
 void setup_i2c_configuration(TouchDriver* td)
