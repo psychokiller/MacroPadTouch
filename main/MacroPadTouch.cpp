@@ -26,7 +26,7 @@ i2c_master_dev_handle_t *i2c_dev_handle, i2c_dev;
 TouchPoint tp;
 
 void setup_i2c_configuration(TouchDriver*);
-void clear_screen(uint8_t *BlankDisplayImage, WaveShare213 &display, display_color color);
+void clear_screen(uint8_t *BlankDisplayImage, Display &display, display_color color);
 
 extern "C" void app_main(void)
 {
@@ -87,7 +87,7 @@ extern "C" void app_main(void)
 
 
 
-void clear_screen(uint8_t *BlankDisplayImage, WaveShare213 &display, display_color color)
+void clear_screen(uint8_t *BlankDisplayImage, Display &display, display_color color)
 {
     Paint_NewImage(BlankDisplayImage, display.get_width(), display.get_height(), ROTATE_90, color);
     Paint_Clear(color);
