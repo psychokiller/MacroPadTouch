@@ -62,3 +62,14 @@ This maps esp32 pins to the 40pin connector pin number, and the GPIO Pin Number
 | 17 | 13 | 27 | TOUCH_INTERRUPT|
 | 11 | 19 | 10 |  DISPLAY_SPI_MOSI|
 | 10 | 23 | 11 | DISPLAY_SPI_CLK|
+
+## Display Vs Touch Controller
+The displays consider origin (0,0) as the top-left corner (ROTATE_90 is used), while the Touch controller considers origin (0,0) as bottom-left corner.
+This means that in landscape the longer side of the screen is considered the height, while the shorter end of the screen is considered the width.
+This plays an important role to match the touch events to the drawings on the screen.
+
+## NimBLE
+This code is using NimBLE and a C++ wrapper around it, to use NimBLE you need to:
+1. run `idf.py menuconfig`
+2. enable bluetooth and [NimBLE](https://github.com/h2zero/esp-nimble-cpp/blob/master/README.md#installation)
+3. download the [C++ wrapper library](https://github.com/h2zero/esp-nimble-cpp/) and extract them to where your `idf` instance is deployed under the `components` directory (i.e. /Users/USERNAME/DevTools/esp/esp-idf/components/esp-nimble-cpp)
