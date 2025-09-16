@@ -23,9 +23,7 @@ private:
     const uint16_t firstCoordinates_address = 0x814F;
     
 public:
-    TouchPoint touch;
-
-    Gt1151(/* args */);
+    Gt1151();
     ~Gt1151();
 
     void reset() override;

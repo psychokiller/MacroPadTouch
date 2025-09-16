@@ -67,33 +67,33 @@ TouchPoint Gt1151::scan(i2c_master_dev_handle_t *i2c_dev_handle)
     {
         I2C_WRITE(baseCoordinates_address, mask, 1, i2c_dev_handle);
         vTaskDelay(pdMS_TO_TICKS(1));
-        // ESP_LOGI(TAG, " NO TOUCH WAS DETECTED \r\n");
-        return touch;
+        return TouchPoint();
     }
     else
     {
         ESP_LOGI(TAG, "TOUCH WAS DETECTED \r\n");
+        touch = new TouchPoint();
         uint8_t touchCount = buff[0] & 0x0f;
         if (touchCount > 5 || touchCount < 1)
         {
             ESP_LOGI(TAG, "Touch Count was wrong read again....");
             I2C_WRITE(baseCoordinates_address, mask, 1, i2c_dev_handle);
-            return touch;
+            return  TouchPoint();
         }
         I2C_READ(firstCoordinates_address, &buff[1], touchCount * 8, i2c_dev_handle);
         I2C_WRITE(baseCoordinates_address, mask, 1, i2c_dev_handle);
         for (int i = 0; i < touchCount; i++)
         {
-            touch.track_id = buff[1 + 8 * i];
-            touch.x = ((uint16_t)buff[3 + 8 * i] << 8) + buff[2 + 8 * i];
-            touch.y = ((uint16_t)buff[5 + 8 * i] << 8) + buff[4 + 8 * i];
-            touch.size = ((uint16_t)buff[7 + 8 * i] << 8) + buff[6 + 8 * i];
+            touch->track_id = buff[1 + 8 * i];
+            touch->x = ((uint16_t)buff[3 + 8 * i] << 8) + buff[2 + 8 * i];
+            touch->y = ((uint16_t)buff[5 + 8 * i] << 8) + buff[4 + 8 * i];
+            touch->size = ((uint16_t)buff[7 + 8 * i] << 8) + buff[6 + 8 * i];
 
-            ESP_LOGI(TAG, "TOUCH WAS DETECTED trackId: %d, x: %d, y: %d, s: %d", touch.track_id, touch.x, touch.y, touch.size);
+            ESP_LOGI(TAG, "TOUCH WAS DETECTED trackId: %d, x: %d, y: %d, s: %d", touch->track_id, touch->x, touch->y, touch->size);
         }
-        return touch;
+        return *touch;
     }
-    return touch;
+    return *touch;
 }
 
 i2c_device_config_t Gt1151::get_device_config()
