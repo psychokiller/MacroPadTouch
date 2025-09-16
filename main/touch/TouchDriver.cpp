@@ -1,3 +1,5 @@
 #include "TouchDriver.h"
 
-TouchDriver::TouchDriver() {}
+TouchDriver::TouchDriver() {
+    touch = NULL;
+}

@@ -15,7 +15,7 @@ class TouchDriver
 {
 public:
     TouchDriver();
-    TouchPoint touch;
+    TouchPoint *touch;
     virtual void reset() = 0;
     virtual esp_err_t read_product_id(i2c_master_dev_handle_t *) = 0;
     virtual void init(i2c_master_dev_handle_t *) = 0;
