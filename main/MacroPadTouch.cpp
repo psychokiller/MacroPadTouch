@@ -19,19 +19,17 @@
 #include "graphics/Button.h"
 #include "ui/UiManager.h"
 #include <string>
-#include<vector>
+#include <vector>
 
 i2c_master_dev_handle_t *i2c_dev_handle, i2c_dev;
 
-TouchPoint tp;
-
-void setup_i2c_configuration(TouchDriver*);
+void setup_i2c_configuration(TouchDriver *);
 void clear_screen(uint8_t *BlankDisplayImage, Display &display, display_color color);
 
 extern "C" void app_main(void)
 {
 
-    TouchDriver* touchDriver = new Gt1151();
+    TouchDriver *touchDriver = new Gt1151();
     // TouchDriver* touchDriver = new Icnt86x();
     setup_i2c_configuration(touchDriver);
     touchDriver->init(i2c_dev_handle);
@@ -54,38 +52,53 @@ extern "C" void app_main(void)
     }
 
     clear_screen(BlankDisplayImage, display, WHITE);
+    Paint_SetMirroring(MIRROR_ORIGIN);
 
     const uint16_t number_of_buttons = 6;
 
-    UiManager* ui = new UiManager(display);
-    std::vector<Button*> buttons;
-    
+    UiManager *ui = new UiManager(display, 2, 3);
+    std::vector<Button *> buttons;
 
     // Button** buttons = new Button*[number_of_buttons];
 
-    for (int i = 0; i < number_of_buttons ; i ++) {
-        const char* btn_header = ("KOKO" + std::to_string(i)).c_str();
+    for (int i = 0; i < number_of_buttons; i++)
+    {
+        const char *btn_header = ("KOKO" + std::to_string(i)).c_str();
         ESP_LOGI("Main", "Btn Header: %s", btn_header);
-        buttons.push_back(new Button(const_cast<char*>( btn_header), &Font20, BLACK, WHITE));
+        buttons.push_back(new Button(const_cast<char *>(btn_header), &Font20, BLACK, WHITE));
     }
 
     ui->draw(buttons);
 
-    // Paint_DrawString_EN(0,0, "KOKOKOKO", &Font24, WHITE, BLACK);
-    // Paint_DrawRectangle(0,0,50,50,BLACK,DOT_PIXEL_2X2, DRAW_FILL_EMPTY);
-    // Paint_DrawBitMap(gImage_2in9);
-
     display.display(BlankDisplayImage);
-    
+
+    TouchPoint last_tp;
+    uint32_t last_touch_time = 0;
+    const uint32_t debounce_ms = 200; // 200ms debounce
+
     while (true)
     {
-        tp = touchDriver->scan(i2c_dev_handle);
-        
-        // use tp
+        TouchPoint tp = touchDriver->scan(i2c_dev_handle);
+
+        if (tp.size > 0)
+        {
+            uint32_t current_time = xTaskGetTickCount() * portTICK_PERIOD_MS;
+
+            // Simple debouncing - ignore touches too close in time and position
+            if (current_time - last_touch_time > debounce_ms ||
+                abs((int)tp.x - (int)last_tp.x) > 10 ||
+                abs((int)tp.y - (int)last_tp.y) > 10)
+            {
+
+                last_tp = tp;
+                // use tp
+                if (ui->isButtonPressed(&tp, buttons))
+                {
+                }
+            }
+        }
     }
 }
-
-
 
 void clear_screen(uint8_t *BlankDisplayImage, Display &display, display_color color)
 {
@@ -93,7 +106,7 @@ void clear_screen(uint8_t *BlankDisplayImage, Display &display, display_color co
     Paint_Clear(color);
 }
 
-void setup_i2c_configuration(TouchDriver* td)
+void setup_i2c_configuration(TouchDriver *td)
 {
     // define I2C bus configuration
     i2c_master_bus_config_t master_config = {

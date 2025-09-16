@@ -9,19 +9,16 @@
 
 class UiManager {
     public:
-    UiManager(Display& display);
+    UiManager(Display& display, size_t rows, size_t cols);
     ~UiManager();
 
     void draw(std::vector<Button*>& buttons);
+    bool isButtonPressed(TouchPoint* tp, std::vector<Button*>& buttons);
     
     private:
-    
-    uint16_t number_of_rows;
-    uint16_t btn_height;
-    uint16_t btn_width;
-    static const uint16_t number_of_cols = 3;
-    static const uint16_t total_number_of_buttons = 6;
-    static const uint16_t btn_spacer = 2;
+    Display &display;
+    size_t grid_rows;
+    size_t grid_cols;
 };
 
 #endif
