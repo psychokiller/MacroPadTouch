@@ -16,6 +16,7 @@ idf_component_register(SRCS "MacroPadTouch.cpp"
                 "graphics/ImageData.cpp"
                 "graphics/Button.cpp"
                 "ui/UiManager.cpp"
+                "bluetooth/BleKeyboard.cpp"
                 INCLUDE_DIRS "."
                     )
 
