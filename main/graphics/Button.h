@@ -22,11 +22,13 @@ class Button {
 
         bool isPressed(uint16_t x, uint16_t y);
 
-        std::string get_text();
+        std::string get_label();
         uint16_t get_xPos() { return xPos; }
         uint16_t get_yPos() { return yPos; }
         uint16_t get_xPosEnd() { return xPosEnd; }
         uint16_t get_yPosEnd() { return yPosEnd; }
+        uint8_t get_index() { return index; }
+        void set_index(uint8_t idx) { index = idx; }
     
     private:    
         uint16_t width;
@@ -35,6 +37,7 @@ class Button {
         uint16_t yPos;
         uint16_t xPosEnd;
         uint16_t yPosEnd;
+        uint8_t index;
         std::string label;
         display_color foreground_color;
         display_color background_color;

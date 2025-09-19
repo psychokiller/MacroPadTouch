@@ -37,7 +37,7 @@ void Button::set_yPos(uint16_t y)
 {
     this->yPos = y;
 }
-std::string Button::get_text()
+std::string Button::get_label()
 {
     return this->label;
 }

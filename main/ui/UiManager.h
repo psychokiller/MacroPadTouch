@@ -13,7 +13,7 @@ class UiManager {
     ~UiManager();
 
     void draw(std::vector<Button*>& buttons);
-    bool isButtonPressed(TouchPoint* tp, std::vector<Button*>& buttons);
+    Button* getPressedButton(TouchPoint* tp, std::vector<Button*>& buttons);
     
     private:
     Display &display;

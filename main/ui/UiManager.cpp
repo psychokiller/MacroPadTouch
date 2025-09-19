@@ -23,13 +23,14 @@ void UiManager::draw(std::vector<Button*> &buttons) {
         button->set_height(btn_w);
         button->set_xPos(x);
         button->set_yPos(y);
+        button->set_index(i+1);
 
         button->draw();
-        ESP_LOGI("UI", "Btn Header: %s, Btn XPos %d, yPos: %d, xEnd: %d, yEnd: %d", button->get_text().c_str(), button->get_xPos(), button->get_yPos(), button->get_xPosEnd(), button->get_yPosEnd());
+        ESP_LOGI("UI", "Btn Header: %s, Btn XPos %d, yPos: %d, xEnd: %d, yEnd: %d", button->get_label().c_str(), button->get_xPos(), button->get_yPos(), button->get_xPosEnd(), button->get_yPosEnd());
     }
 }
 
-bool UiManager::isButtonPressed(TouchPoint *tp, std::vector<Button*>& buttons)
+Button* UiManager::getPressedButton(TouchPoint *tp, std::vector<Button*>& buttons)
 {   
      ESP_LOGI("UI", "Display dimensions: h: %i, w: %i", display.get_height(), display.get_width());
      ESP_LOGI("UI", "New Coordinates: x: %i, y: %i", display.get_width() - tp->x, tp->y);
@@ -39,10 +40,10 @@ bool UiManager::isButtonPressed(TouchPoint *tp, std::vector<Button*>& buttons)
      tp->y = this->display.get_width() - tmp;
     for (Button* b : buttons) {
         if (b->isPressed(tp->x, tp->y)){
-             ESP_LOGI("UI", "Button pressed: %s on %d, %d", b->get_text().c_str(), tp->x, tp->y);
-            return true;
+             ESP_LOGI("UI", "Button pressed: %s on %d, %d", b->get_label().c_str(), tp->x, tp->y);
+            return b;
         }
     }
 
-    return false;
+    return nullptr;
 }
