@@ -31,20 +31,42 @@ i2c_master_dev_handle_t *i2c_dev_handle, i2c_dev;
 void setup_i2c_configuration(TouchDriver *);
 void clear_screen(uint8_t *BlankDisplayImage, Display &display, display_color color);
 
+void releaseAllKeys(uint8_t report[8]);
+
 NimBLEServer* pServer;
 NimBLEHIDDevice* hid;
 NimBLECharacteristic* input;
 NimBLEAdvertising* pAdvertising;
 
-void sendKey(uint8_t keycode) {
+void sendKey(uint8_t modifiers, uint8_t keycode) {
     uint8_t report[8] = {0};
-    report[2] = keycode;   // Put key in first slot
-    input->setValue(report, sizeof(report));
-    input->notify();
-
+    
     // Release key
     memset(report, 0, sizeof(report));
     input->setValue(report, sizeof(report));
+
+    input->notify();
+
+    vTaskDelay(100 / portTICK_PERIOD_MS); // 10 ms
+
+    
+    report[0] = modifiers; // Modifier keys
+    report[2] = keycode;   // Put key in first slot
+    input->setValue(report, sizeof(report));
+
+    input->notify();
+
+    vTaskDelay(10 / portTICK_PERIOD_MS); // 10 ms
+
+    releaseAllKeys(report);
+}
+
+void releaseAllKeys(uint8_t report[8])
+{
+    // Release key
+    memset(report, 0, sizeof(report));
+    input->setValue(report, sizeof(report));
+
     input->notify();
 }
 
@@ -55,45 +77,57 @@ void setupBLE() {
     hid = new NimBLEHIDDevice(pServer);
 
     input = hid->getInputReport(1);   // Report ID = 1
-    hid->setManufacturer("ESP32");
+    hid->setManufacturer("Smile's Co.");
 
     hid->setPnp(0x02, 0xe502, 0xa111, 0x0210);
-    hid->setHidInfo(0x00,0x01);
+    hid->setHidInfo(0x0111, 0x01);
 
-    const uint8_t reportMap[] = {
-    0x05, 0x01,       // Usage Page (Generic Desktop Ctrls)
+const uint8_t reportMap[] = {
+    0x05, 0x01,       // Usage Page (Generic Desktop)
     0x09, 0x06,       // Usage (Keyboard)
     0xA1, 0x01,       // Collection (Application)
-    0x05, 0x07,       // Usage Page (Keyboard/Keypad)
+    0x85, 0x01,       //   Report ID (1)
+    0x05, 0x07,       // Usage Page (Key Codes)
     0x19, 0xE0,       // Usage Minimum (224)
     0x29, 0xE7,       // Usage Maximum (231)
     0x15, 0x00,       // Logical Minimum (0)
     0x25, 0x01,       // Logical Maximum (1)
     0x75, 0x01,       // Report Size (1)
     0x95, 0x08,       // Report Count (8)
-    0x81, 0x02,       // Input (Modifier)
+    0x81, 0x02,       // Input (Data, Variable, Absolute) ; Modifier byte
     0x95, 0x01,       // Report Count (1)
     0x75, 0x08,       // Report Size (8)
-    0x81, 0x01,       // Input (Reserved)
+    0x81, 0x01,       // Input (Constant) ; Reserved byte
+    0x95, 0x05,       // Report Count (6)
+    0x75, 0x01,       // Report Size (8)
+    0x05, 0x08,       // Usage Page (LEDs)
+    0x19, 0x01,       // Usage Minimum (1)
+    0x29, 0x05,       // Usage Maximum (5)
+    0x91, 0x02,       // Output (Data, Variable, Absolute) ; LED report
+    0x95, 0x01,       // Report Count (1)
+    0x75, 0x03,       // Report Size (3)
+    0x91, 0x01,       // Output (Constant) ; LED report padding
     0x95, 0x06,       // Report Count (6)
     0x75, 0x08,       // Report Size (8)
     0x15, 0x00,       // Logical Minimum (0)
     0x25, 0x65,       // Logical Maximum (101)
-    0x05, 0x07,       // Usage Page (Keyboard/Keypad)
+    0x05, 0x07,       // Usage Page (Key Codes)
     0x19, 0x00,       // Usage Minimum (0)
     0x29, 0x65,       // Usage Maximum (101)
-    0x81, 0x00,       // Input (Keys)
+    0x81, 0x00,       // Input (Data, Array)
     0xC0              // End Collection
 };
 
 
     hid->setReportMap((uint8_t*)reportMap, sizeof(reportMap));
+    hid->setBatteryLevel(100);
     hid->startServices();
 
     pAdvertising = NimBLEDevice::getAdvertising();
     pAdvertising->setAppearance(HID_KEYBOARD);
     pAdvertising->addServiceUUID(hid->getHidService()->getUUID());
     pAdvertising->start();
+    sendKey(0x00, 0x00); // Send empty report to avoid stuck keys
 }
 
 extern "C" void app_main(void)
@@ -162,7 +196,46 @@ extern "C" void app_main(void)
 
                 last_tp = tp;
                 // use tp
-                if (ui->isButtonPressed(&tp, buttons))
+                Button* pressedButton = ui->getPressedButton(&tp, buttons);
+                if (pressedButton != nullptr)
+                {
+                    last_touch_time = current_time;
+                    uint8_t btnIndex = pressedButton->get_index();
+                    std::string btnText = pressedButton->get_label();
+                    ESP_LOGI("Main", "Button %s Idx: %d pressed!", btnText.c_str(), btnIndex);
+
+                    if (btnIndex == 1)
+                    {
+                        sendKey(0x08, 0x2C); // 'cmd' + 'space'
+                        sendKey(0x02, 0x04); // 'shift' + 'a'
+                        sendKey(0x00, 0x04); // just 'a'
+
+                        ESP_LOGI("Main", "Button %s Idx: %d pressed!", btnText.c_str(), btnIndex);
+                    }
+                    else if (btnIndex == 2)
+                    {
+                        // sendKey(0x37); // 'cmd'
+                        // sendKey(0x3A); // 'option'
+                        // sendKey(0x06); // 'c'
+                        // sendKeys((uint8_t[]){0xE3, 0xE2, 0x06}, 3);
+                    }
+                    else if (btnIndex == 3)
+                    {
+                        // sendKey(0x06); // 'c'
+                    }
+                    else if (btnIndex == 4)
+                    {
+                        // sendKey(0x07); // 'd'
+                    }
+                    else if (btnIndex == 5)
+                    {
+                        // sendKey(0x08); // 'e'
+                    }
+                    else if (btnIndex == 6)
+                    {
+                        // sendKey(0x09); // 'f'
+                    }
+                }
                 {
                 }
             }
