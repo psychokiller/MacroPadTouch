@@ -11,7 +11,7 @@
 class Button {
     public:
 
-        Button(std::string label, sFONT* font, display_color fg, display_color bg);
+        Button(std::string label, sFONT* font, display_color fg, display_color bg, const unsigned char* icon, uint16_t modifier, uint16_t keycode);
         ~Button();
         void set_width(uint16_t width);
         void set_height(uint16_t height);
@@ -29,6 +29,12 @@ class Button {
         uint16_t get_yPosEnd() { return yPosEnd; }
         uint8_t get_index() { return index; }
         void set_index(uint8_t idx) { index = idx; }
+
+        void set_modifier(uint16_t modifier);
+        uint16_t get_modifier() { return modifier; }
+
+        void set_keycode(uint16_t keycode);
+        uint16_t get_keycode() { return keycode; }
     
     private:    
         uint16_t width;
@@ -41,6 +47,9 @@ class Button {
         std::string label;
         display_color foreground_color;
         display_color background_color;
+        const unsigned char* icon;
+        uint16_t modifier;
+        uint16_t keycode;
         sFONT* font;
         uint64_t lastPressTime;
         bool isBtnPressed = false;

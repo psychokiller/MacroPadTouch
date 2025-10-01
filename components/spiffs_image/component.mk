@@ -1,0 +1,1 @@
+COMPONENT_ADD_LDFLAGS += -l spiffs_image

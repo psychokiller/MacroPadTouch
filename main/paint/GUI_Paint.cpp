@@ -671,7 +671,7 @@ info:
     Use a computer to convert the image into a corresponding array,
     and then embed the array directly into Imagedata.cpp as a .c file.
 ******************************************************************************/
-void Paint_DrawBitMap(const unsigned char* image_buffer)
+void Paint_DrawBitMap(unsigned char* image_buffer)
 {
     uint16_t x, y;
     uint32_t Addr = 0;

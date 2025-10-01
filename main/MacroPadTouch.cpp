@@ -14,13 +14,15 @@
 #include "display/ePaper/WaveShare29.h"
 #include "driver/spi_master.h"
 #include "paint/GUI_Paint.h"
-#include "graphics/ImageData.h"
 #include "fonts/fonts.h"
 #include "graphics/Button.h"
 #include "ui/UiManager.h"
 #include <string>
 #include <vector>
 #include "bluetooth/BleKeyboard.h"
+#include "configuration/ButtonConfig.h"
+#include "graphics/IconLoader.h"
+#include "esp_spiffs.h"
 
 i2c_master_dev_handle_t *i2c_dev_handle, i2c_dev;
 
@@ -29,6 +31,35 @@ void clear_screen(uint8_t *BlankDisplayImage, Display &display, display_color co
 
 extern "C" void app_main(void)
 {
+
+    esp_vfs_spiffs_conf_t conf = {
+      .base_path = "/spiffs",
+      .partition_label = NULL,
+      .max_files = 5,
+      .format_if_mount_failed = true
+    };
+
+    esp_err_t ret = esp_vfs_spiffs_register(&conf);
+
+    if (ret != ESP_OK) {
+        if (ret == ESP_FAIL) {
+            ESP_LOGE("SPIFFS", "Failed to mount or format filesystem");
+        } else if (ret == ESP_ERR_NOT_FOUND) {
+            ESP_LOGE("SPIFFS", "Failed to find SPIFFS partition");
+        } else {
+            ESP_LOGE("SPIFFS", "Failed to initialize SPIFFS (%s)", esp_err_to_name(ret));
+        }
+        return;
+    }
+
+    size_t total = 0, used = 0;
+    ret = esp_spiffs_info(NULL, &total, &used);
+    if (ret != ESP_OK) {
+        ESP_LOGE("SPIFFS", "Failed to get SPIFFS partition information (%s)", esp_err_to_name(ret));
+    } else {
+        ESP_LOGI("SPIFFS", "Partition size: total: %d, used: %d", total, used);
+    }
+
     BleKeyboard bleKeyboard("MacroPadTouch");
 
     TouchDriver *touchDriver = new Gt1151();
@@ -56,18 +87,23 @@ extern "C" void app_main(void)
     clear_screen(BlankDisplayImage, display, WHITE);
     Paint_SetMirroring(MIRROR_ORIGIN);
 
-    const uint16_t number_of_buttons = 6;
-
     UiManager *ui = new UiManager(display, 2, 3);
     std::vector<Button *> buttons;
 
-    // Button** buttons = new Button*[number_of_buttons];
+    IconLoader iconLoader;
 
-    for (int i = 0; i < number_of_buttons; i++)
-    {
-        const char *btn_header = ("KOKO" + std::to_string(i)).c_str();
-        ESP_LOGI("Main", "Btn Header: %s", btn_header);
-        buttons.push_back(new Button(const_cast<char *>(btn_header), &Font20, BLACK, WHITE));
+    ESP_LOGI("Main", "Loading button configurations from CSV file.");
+     // Load button configurations from JSON file
+    ButtonConfigReader configReader("/spiffs/btn_config.csv");
+    ESP_LOGI("Main", "Loaded button configurations from CSV file.");
+    std::vector<ButtonConfig> buttonConfigs = configReader.getButtonConfigs();
+
+    // Create buttons based on configurations
+    for (const auto& config : buttonConfigs) {
+        // Load icon (replace with your actual icon loading logic)
+        const unsigned char* icon = iconLoader.loadIcon(config.iconPath);
+
+        buttons.push_back(new Button(config.label, &Font20, BLACK, WHITE, icon, config.modifier, config.keycode));
     }
 
     ui->draw(buttons);
@@ -104,7 +140,7 @@ extern "C" void app_main(void)
 
                     if (btnIndex == 1)
                     {
-                        bleKeyboard.sendKey(0x08, 0x2C); // 'cmd' + 'space'
+                        bleKeyboard.sendKey(pressedButton->get_modifier(), pressedButton->get_keycode()); // 'cmd' + 'space'
                         // sendKey(0x02, 0x04); // 'shift' + 'a'
                         // sendKey(0x00, 0x04); // just 'a'
 

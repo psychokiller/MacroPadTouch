@@ -13,10 +13,12 @@ idf_component_register(SRCS "MacroPadTouch.cpp"
                 "fonts/font20.cpp"
                 "fonts/font24.cpp"
                 "paint/GUI_Paint.cpp"
-                "graphics/ImageData.cpp"
                 "graphics/Button.cpp"
                 "ui/UiManager.cpp"
                 "bluetooth/BleKeyboard.cpp"
+                "configuration/ButtonConfig.cpp"
+                "graphics/IconLoader.cpp"
                 INCLUDE_DIRS "."
-                    )
+REQUIRES driver esp_timer nvs_flash spiffs esp-nimble-cpp
+                )
 
