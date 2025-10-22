@@ -15,10 +15,14 @@ idf_component_register(SRCS "MacroPadTouch.cpp"
                 "paint/GUI_Paint.cpp"
                 "graphics/Button.cpp"
                 "ui/UiManager.cpp"
+                "ui/UiMath.cpp"
                 "bluetooth/BleKeyboard.cpp"
                 "configuration/ButtonConfig.cpp"
                 "graphics/IconLoader.cpp"
+                "services/HttpFileServer.cpp"
+                "ui/OnScreenKeyboard.hpp"
+                "web/HtmlGenerator.hpp"
                 INCLUDE_DIRS "."
-REQUIRES driver esp_timer nvs_flash spiffs esp-nimble-cpp
+REQUIRES driver esp_timer nvs_flash spiffs esp-nimble-cpp esp_http_server NvsConfigManager WifiManager FileManager
                 )
 
