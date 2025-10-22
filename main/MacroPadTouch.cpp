@@ -23,42 +23,54 @@
 #include "configuration/ButtonConfig.h"
 #include "graphics/IconLoader.h"
 #include "esp_spiffs.h"
+#include "services/HttpFileServer.hpp"
+#include "WifiManager.hpp"
+#include "ui/OnScreenKeyboard.hpp"
+
+static const char *TAG_APP = "Main";
 
 i2c_master_dev_handle_t *i2c_dev_handle, i2c_dev;
 
 void setup_i2c_configuration(TouchDriver *);
 void clear_screen(uint8_t *BlankDisplayImage, Display &display, display_color color);
 
+// Global pointer to the server instance to manage its lifetime/state
+static HttpFileServer *s_http_server = nullptr;
+
+// Custom Event Handler for the Application
+static void app_event_handler(void* arg, esp_event_base_t event_base,
+                              int32_t event_id, void* event_data) {
+    if (event_base == APP_EVENTS) {
+        // Condition 1: Start the server when ANY networking mode is ready.
+        if (event_id == APP_EVENT_WIFI_STA_CONNECTED || event_id == APP_EVENT_WIFI_AP_STARTED) {
+            if (s_http_server == nullptr) {
+                ESP_LOGI(TAG_APP, "Network ready. Starting HTTP Server...");
+                WifiManager& wifi_manager = WifiManager::getInstance();
+                start_http_file_server();
+            }
+        }
+        
+        // Condition 2: Handle server shutdown if STA connection is lost (optional)
+        if (event_id == APP_EVENT_WIFI_DISCONNECTED) {
+             // You could implement logic here to temporarily stop the server 
+             // or switch its behavior, but generally, the AP keeps it running.
+        }
+    }
+}
+
+
 extern "C" void app_main(void)
 {
+    // Create default event loop
+    ESP_ERROR_CHECK(esp_event_loop_create_default());
 
-    esp_vfs_spiffs_conf_t conf = {
-      .base_path = "/spiffs",
-      .partition_label = NULL,
-      .max_files = 5,
-      .format_if_mount_failed = true
-    };
+    NvsConfigManager nvs_manager_instance = NvsConfigManager::getInstance();
 
-    esp_err_t ret = esp_vfs_spiffs_register(&conf);
+    ESP_ERROR_CHECK(esp_event_handler_register(APP_EVENTS, ESP_EVENT_ANY_ID, &app_event_handler, NULL));
 
-    if (ret != ESP_OK) {
-        if (ret == ESP_FAIL) {
-            ESP_LOGE("SPIFFS", "Failed to mount or format filesystem");
-        } else if (ret == ESP_ERR_NOT_FOUND) {
-            ESP_LOGE("SPIFFS", "Failed to find SPIFFS partition");
-        } else {
-            ESP_LOGE("SPIFFS", "Failed to initialize SPIFFS (%s)", esp_err_to_name(ret));
-        }
-        return;
-    }
+    WifiManager& wifi_manager = WifiManager::getInstance();
+    ESP_ERROR_CHECK(wifi_manager.start_apsta());
 
-    size_t total = 0, used = 0;
-    ret = esp_spiffs_info(NULL, &total, &used);
-    if (ret != ESP_OK) {
-        ESP_LOGE("SPIFFS", "Failed to get SPIFFS partition information (%s)", esp_err_to_name(ret));
-    } else {
-        ESP_LOGI("SPIFFS", "Partition size: total: %d, used: %d", total, used);
-    }
 
     BleKeyboard bleKeyboard("MacroPadTouch");
 
@@ -88,6 +100,7 @@ extern "C" void app_main(void)
     Paint_SetMirroring(MIRROR_ORIGIN);
 
     UiManager *ui = new UiManager(display, 2, 3);
+    
     std::vector<Button *> buttons;
 
     IconLoader iconLoader;
@@ -117,6 +130,8 @@ extern "C" void app_main(void)
     while (true)
     {
         TouchPoint tp = touchDriver->scan(i2c_dev_handle);
+        TouchPoint aTp = ui->getPressedCoordinates(&tp);
+        // Keyboard_HandleTouch(aTp.x, aTp.y);
 
         if (tp.size > 0)
         {
@@ -138,39 +153,7 @@ extern "C" void app_main(void)
                     std::string btnText = pressedButton->get_label();
                     ESP_LOGI("Main", "Button %s Idx: %d pressed!", btnText.c_str(), btnIndex);
 
-                    if (btnIndex == 1)
-                    {
-                        bleKeyboard.sendKey(pressedButton->get_modifier(), pressedButton->get_keycode()); // 'cmd' + 'space'
-                        // sendKey(0x02, 0x04); // 'shift' + 'a'
-                        // sendKey(0x00, 0x04); // just 'a'
-
-                        ESP_LOGI("Main", "Button %s Idx: %d pressed!", btnText.c_str(), btnIndex);
-                    }
-                    else if (btnIndex == 2)
-                    {
-                        // sendKey(0x37); // 'cmd'
-                        // sendKey(0x3A); // 'option'
-                        // sendKey(0x06); // 'c'
-                        // sendKeys((uint8_t[]){0xE3, 0xE2, 0x06}, 3);
-                    }
-                    else if (btnIndex == 3)
-                    {
-                        // sendKey(0x06); // 'c'
-                    }
-                    else if (btnIndex == 4)
-                    {
-                        // sendKey(0x07); // 'd'
-                    }
-                    else if (btnIndex == 5)
-                    {
-                        // sendKey(0x08); // 'e'
-                    }
-                    else if (btnIndex == 6)
-                    {
-                        // sendKey(0x09); // 'f'
-                    }
-                }
-                {
+                    bleKeyboard.sendKey(pressedButton->get_modifier(), pressedButton->get_keycode());
                 }
             }
         }
