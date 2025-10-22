@@ -2,6 +2,7 @@
 #define _TouchPoint_H_
 
 #include <stdio.h>
+#include <cstdint>
 
 // Basic structure to hold a point data
 // based on the GT1151N Data sheet
