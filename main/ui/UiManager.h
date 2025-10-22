@@ -14,6 +14,7 @@ class UiManager {
 
     void draw(std::vector<Button*>& buttons);
     Button* getPressedButton(TouchPoint* tp, std::vector<Button*>& buttons);
+    TouchPoint getPressedCoordinates(TouchPoint* tp);
     
     private:
     Display &display;
