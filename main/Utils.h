@@ -16,5 +16,6 @@ uint8_t I2C_WRITE(uint16_t , uint8_t* , uint8_t, i2c_master_dev_handle_t*);
 uint8_t I2C_READ(uint16_t , uint8_t* , uint8_t , i2c_master_dev_handle_t*);
 void SPI_WRITE(uint8_t, spi_device_handle_t);
 void SPI_WRITE_N(uint8_t*, uint32_t, spi_device_handle_t);
+uint8_t I2C_CLEAR_REGISTER(uint16_t register_address, i2c_master_dev_handle_t *i2c_dev_handle);
 
 #endif

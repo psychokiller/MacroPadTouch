@@ -57,3 +57,16 @@ void SPI_WRITE_N(uint8_t *data, uint32_t len, spi_device_handle_t handle)
         SPI_WRITE(data[i], handle);
     }
 }
+
+uint8_t I2C_CLEAR_REGISTER(uint16_t register_address, i2c_master_dev_handle_t *i2c_dev_handle)
+{
+    // The command sequence is: [RegAddr MSB, RegAddr LSB]
+    // The chip is NACKing the 3-byte write, so we try clearing the flag by only writing its 2-byte address.
+    uint8_t clear_command[2] = {
+        (uint8_t)((register_address >> 8) & 0xff), // MSB (0x10 for 0x1001)
+        (uint8_t)(register_address & 0xff)         // LSB (0x01 for 0x1001)
+    };
+    
+    // Transmit only 2 bytes (Big-Endian Address). The chip NACKs the third (data) byte.
+    return i2c_master_transmit(*i2c_dev_handle, clear_command, 2, -1);
+}
