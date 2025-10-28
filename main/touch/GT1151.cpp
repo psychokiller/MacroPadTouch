@@ -56,6 +56,29 @@ void Gt1151::init(i2c_master_dev_handle_t *handle)
     vTaskDelay(pdMS_TO_TICKS(100));
 }
 
+TouchPoint Gt1151::transform_coordinates(const TouchPoint& tp, MIRROR_IMAGE mirror, const Display& display) {
+    TouchPoint transformed = tp;
+    
+    switch (mirror) {
+        case MIRROR_NONE:
+            // No transformation needed
+            break;
+        case MIRROR_HORIZONTAL:
+            transformed.x = display.get_width() - tp.x;
+            break;
+        case MIRROR_VERTICAL:
+            transformed.y = display.get_height() - tp.y;
+            break;
+        case MIRROR_ORIGIN:
+            // The most common case based on the current codebase
+            // transformed.x = tp.y;
+            // transformed.y = display.get_width() - tp.x;
+            break;
+    }
+    
+    return transformed;
+}
+
 TouchPoint Gt1151::scan(i2c_master_dev_handle_t *i2c_dev_handle)
 {
     uint8_t buff[100];

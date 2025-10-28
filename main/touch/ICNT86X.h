@@ -1,5 +1,5 @@
 #ifndef _ICNT86X_H_
-#define _ICNT86XH_
+#define _ICNT86X_H_
 
 #include "TouchDriver.h"
 
@@ -14,8 +14,6 @@ private:
     const uint16_t firstCoordinates_address = 0x1002;
     
 public:
-    TouchPoint touch;
-
     Icnt86x(/* args */);
     ~Icnt86x();
 
@@ -25,6 +23,7 @@ public:
     TouchPoint scan(i2c_master_dev_handle_t *) override;
 
     i2c_device_config_t get_device_config() override;
+    TouchPoint transform_coordinates(const TouchPoint& tp, MIRROR_IMAGE mirror, const Display& display) override;
 };
 
 #endif

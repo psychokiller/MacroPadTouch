@@ -13,9 +13,9 @@ public:
     TouchPoint();
     ~TouchPoint();
     uint8_t track_id; // the trackId of the touch point
-    uint8_t x;        // x-axis value/coordinate
-    uint8_t y;        // y-axis value/coordinate
-    uint8_t size;     // size of the touch point
+    uint16_t x;       // x-axis value/coordinate (16-bit from controller)
+    uint16_t y;       // y-axis value/coordinate (16-bit from controller)
+    uint16_t size;    // size of the touch point (sometimes 16-bit)
 };
 
 #endif
