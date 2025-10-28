@@ -36,8 +36,8 @@ public:
     void send_data(uint8_t data);
     void send_data2(uint8_t *data, uint32_t len);
     
-    uint16_t get_width();
-    uint16_t get_height();
+    uint16_t get_width() const;
+    uint16_t get_height() const;
     uint16_t get_spi_clk_speed();
     uint16_t get_total_display_size_bytes();
 

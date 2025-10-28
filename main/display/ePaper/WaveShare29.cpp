@@ -1,80 +1,7 @@
 #include "WaveShare29.h"
 
-WaveShare29::WaveShare29(): Display(width, height, spi_clock_speed)
-{
-    // gpio_set_direction(DISPLAY_BUSY, GPIO_MODE_INPUT);
-    // gpio_set_direction(DISPLAY_RST, GPIO_MODE_OUTPUT);
-    // gpio_set_direction(SPI_DC, GPIO_MODE_OUTPUT);
-    // gpio_set_direction(SPI_CLK, GPIO_MODE_OUTPUT);
-    // gpio_set_direction(SPI_CS, GPIO_MODE_OUTPUT);
-    // gpio_set_direction(SPI_MOSI, GPIO_MODE_OUTPUT);
+WaveShare29::WaveShare29(): Display(width, height, spi_clock_speed) {};
 
-    // spi_device_interface_config_t spi_config = {
-    //     .clock_speed_hz = 20000,
-    //     .spics_io_num = SPI_CS,
-    //     .queue_size = 1
-    // };
-
-    // spi_bus_config_t bus_config = {
-    //     .mosi_io_num = SPI_MOSI,
-    //     .sclk_io_num = SPI_CLK
-    // };
-
-    // spi_bus_initialize(DISPLAY_HOST, &bus_config, SPI_DMA_CH_AUTO);
-
-    // spi_bus_add_device(DISPLAY_HOST, &spi_config, &spi_handle);
-
-    // gpio_set_level(SPI_CS, 1);  // HIGH
-    // gpio_set_level(SPI_CLK, 0); // low
-};
-
-// void WaveShare29::reset()
-// {
-//     gpio_set_level(DISPLAY_RST, 1); // HIGH
-//     vTaskDelay(pdMS_TO_TICKS(20));
-
-//     gpio_set_level(DISPLAY_RST, 0); // LOW
-//     vTaskDelay(pdMS_TO_TICKS(10));
-
-//     gpio_set_level(DISPLAY_RST, 1); // HIGH
-//     vTaskDelay(pdMS_TO_TICKS(10));
-//     ESP_LOGI("EPD_29", "RESET");
-// }
-
-// void WaveShare29::send_command(uint8_t command)
-// {
-//     gpio_set_level(SPI_DC, 0);
-//     gpio_set_level(SPI_CS, 0);
-//     SPI_WRITE(command, spi_handle);
-//     gpio_set_level(SPI_CS, 1);
-// }
-
-// void WaveShare29::send_data(uint8_t data)
-// {
-//     gpio_set_level(SPI_DC, 1);
-//     gpio_set_level(SPI_CS, 0);
-//     SPI_WRITE(data, spi_handle);
-//     gpio_set_level(SPI_CS, 1);
-// }
-
-// void WaveShare29::send_data2(uint8_t *data, uint32_t len)
-// {
-//     gpio_set_level(SPI_DC, 1);
-//     gpio_set_level(SPI_CS, 0);
-//     SPI_WRITE_N(data, len, spi_handle);
-//     gpio_set_level(SPI_CS, 1);
-// }
-
-// void WaveShare29::read_busy()
-// {
-//     while (true)
-//     {
-//         if (gpio_get_level(DISPLAY_BUSY) == 0)
-//             break;
-//         vTaskDelay(pdMS_TO_TICKS(10));
-//     }
-//     ESP_LOGI("EPD_29", "READ BUSY");
-// }
 
 void WaveShare29::set_window(uint16_t x_start, uint16_t y_start, uint16_t x_end, uint16_t y_end)
 {
@@ -236,6 +163,8 @@ void WaveShare29::init(display_refresh_mode mode)
 
 uint16_t WaveShare29::get_screen_width_bytes()
 {
+    // Ensure this calculation is correct for a 128-pixel-wide display
+    // 128 % 8 is 0, so it correctly returns 128 / 8 = 16
     return (width % 8 == 0) ? (width / 8) : (width / 8 + 1);
 }
 
@@ -246,10 +175,16 @@ uint16_t WaveShare29::get_screen_size_bytes()
 
 void WaveShare29::clear(display_color color)
 {
+    uint16_t Width = get_screen_width_bytes();
+    uint16_t Height = height;
+
     send_command(0x24);
-    for (uint16_t j = 0; j < get_screen_width_bytes() ; j++)
+    for (uint16_t j = 0; j < Height; j++)
     {
-        send_data(color);  
+        for (uint16_t i = 0; i < Width; i++)
+        {
+            send_data(color);  
+        }
     }
 
     turn_display_on();
@@ -258,9 +193,17 @@ void WaveShare29::clear(display_color color)
 
 void WaveShare29::display(uint8_t *image)
 {
+
+    uint16_t Width = get_screen_width_bytes();
+    uint16_t Height = height;
+
     send_command(0x24);
-    for (uint16_t i = 0 ; i < get_screen_width_bytes(); i ++){
-        send_data(image[i]);
+    for (uint16_t j = 0; j < Height; j++) 
+    {
+        for (uint16_t i = 0 ; i < Width; i++)
+        {
+            send_data(image[i + j * Width]);
+        }
     }
 
     turn_display_on();
@@ -268,19 +211,29 @@ void WaveShare29::display(uint8_t *image)
 
 void WaveShare29::display_base(uint8_t *image)
 {
+    
+    uint16_t Width = get_screen_width_bytes();
+    uint16_t Height = height;
+
     send_command(0x24);
-    for (uint16_t i = 0 ; i < get_screen_width_bytes(); i ++){
-            send_data(image[i]);
+    for (uint16_t j = 0; j < Height; j++) 
+    {
+        for (uint16_t i = 0 ; i < Width; i++)
+        {
+            send_data(image[i + j * Width]);
+        }
     }
     turn_display_on();
 }
 
 void WaveShare29::display_partial(uint8_t *image)
 {
+
     init(PARTIAL);
 
     send_command(0x24); // Write Black and White image to RAM
-    send_data2(image, get_screen_width_bytes());
+    // Use get_screen_size_bytes() to send the entire buffer
+    send_data2(image, get_screen_size_bytes()); 
     turn_display_on_partial();
 }
 

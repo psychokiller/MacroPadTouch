@@ -37,10 +37,10 @@ void Display::init_display_pin_configuration() {
 uint16_t Display::get_spi_clk_speed() {
     return this->SPI_CLK_SPEED;
 }
-uint16_t Display::get_width() {
+uint16_t Display::get_width() const {
     return this->width;
 }
-uint16_t Display::get_height() {
+uint16_t Display::get_height() const {
     return this->height;
 }
 
