@@ -123,13 +123,15 @@ extern "C" void app_main(void)
 
     display.display(BlankDisplayImage);
 
-    TouchPoint last_tp;
+    TouchPoint last_tp, tp;
     uint32_t last_touch_time = 0;
     const uint32_t debounce_ms = 200; // 200ms debounce
 
     while (true)
     {
-        TouchPoint tp = touchDriver->scan(i2c_dev_handle);
+        last_tp = tp;
+        tp = touchDriver->scan(i2c_dev_handle);
+
         TouchPoint aTp = ui->getPressedCoordinates(&tp);
         // Keyboard_HandleTouch(aTp.x, aTp.y);
 
