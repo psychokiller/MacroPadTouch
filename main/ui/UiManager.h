@@ -6,20 +6,31 @@
 #include "../display/ePaper/Display.h"
 #include <vector>
 
+struct Rect
+{
+    uint16_t x;
+    uint16_t y;
+    uint16_t xEnd;
+    uint16_t yEnd;
+};
 
-class UiManager {
-    public:
-    UiManager(Display& display, size_t rows, size_t cols);
+class UiManager
+{
+public:
+    UiManager(Display &display, size_t rows, size_t cols);
     ~UiManager();
 
-    void draw(std::vector<Button*>& buttons);
-    Button* getPressedButton(TouchPoint* tp, std::vector<Button*>& buttons);
-    TouchPoint getPressedCoordinates(TouchPoint* tp);
-    
-    private:
+    void draw(std::vector<Button *> &buttons);
+    Button *getPressedButton(TouchPoint *tp, std::vector<Button *> &buttons);
+    TouchPoint getPressedCoordinates(TouchPoint *tp);
+
+private:
     Display &display;
     size_t grid_rows;
     size_t grid_cols;
+
+    // Compute cell width/height and return rect for given grid cell.
+    Rect compute_grid_cell(uint16_t display_width, uint16_t display_height, size_t rows, size_t cols, size_t index);
 };
 
 #endif

@@ -30,12 +30,10 @@ void UiManager::draw(std::vector<Button*> &buttons) {
 Button* UiManager::getPressedButton(TouchPoint *tp, std::vector<Button*>& buttons)
 {   
      ESP_LOGI("UI", "Display dimensions: h: %i, w: %i", display.get_height(), display.get_width());
-     ESP_LOGI("UI", "New Coordinates: x: %i, y: %i", display.get_width() - tp->x, tp->y);
+     ESP_LOGI("UI", "Touch Coordinates: x: %i, y: %i", tp->x, tp->y);
 
-    TouchPoint adjusted_tp = transform_touch(*tp, display.get_width(), display.get_height());
-     ESP_LOGI("UI", "Adjusted Coordinates: x: %i, y: %i", adjusted_tp.x, adjusted_tp.y);
     for (Button* b : buttons) {
-        if (b->isPressed(adjusted_tp.x, adjusted_tp.y)){
+        if (b->isPressed(tp->x, tp->y)){
              ESP_LOGI("UI", "Button pressed: %s on %d, %d", b->get_label().c_str(), tp->x, tp->y);
             return b;
         }
@@ -45,11 +43,24 @@ Button* UiManager::getPressedButton(TouchPoint *tp, std::vector<Button*>& button
 }
 
 TouchPoint UiManager::getPressedCoordinates(TouchPoint* tp) {
-    TouchPoint adjusted_tp;
-    adjusted_tp.x = tp->y;
-    adjusted_tp.y = this->display.get_width() - tp->x;
-    adjusted_tp.size = tp->size;
-    adjusted_tp.track_id = tp->track_id;
-    
-    return adjusted_tp;
+    // Coordinates are already transformed by the touch driver
+    return *tp;
+}
+
+Rect UiManager::compute_grid_cell(uint16_t display_width, uint16_t display_height, size_t rows, size_t cols, size_t index) {
+    Rect r{0,0,0,0};
+    uint16_t btn_w = display_height / cols; // width per column
+    uint16_t btn_h = display_width / rows;  // height per row
+
+    size_t row = index / cols;
+    size_t col = index % cols;
+
+    uint16_t x = col * btn_w;
+    uint16_t y = row * btn_h;
+
+    r.x = x;
+    r.y = y;
+    r.xEnd = x + btn_w; // xEnd = x + width assigned to button height in UiManager
+    r.yEnd = y + btn_h;
+    return r;
 }
