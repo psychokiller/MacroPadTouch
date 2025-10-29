@@ -1,7 +1,7 @@
 #include "UiManager.h"
 #include "esp_log.h"
 
-UiManager::UiManager(Display& display, size_t rows, size_t cols) : display(display), grid_rows(rows), grid_cols(cols) {}
+UiManager::UiManager(Display& display, size_t rows, size_t cols, TouchDriver& touch_driver) : display(display), grid_rows(rows), grid_cols(cols), touch_driver(touch_driver) {}
 
 void UiManager::draw(std::vector<Button*> &buttons) {
 
@@ -31,20 +31,17 @@ Button* UiManager::getPressedButton(TouchPoint *tp, std::vector<Button*>& button
 {   
      ESP_LOGI("UI", "Display dimensions: h: %i, w: %i", display.get_height(), display.get_width());
      ESP_LOGI("UI", "Touch Coordinates: x: %i, y: %i", tp->x, tp->y);
+     TouchPoint atp = touch_driver.transform_coordinates(*tp, MIRROR_ORIGIN, display);
+     ESP_LOGI("UI", "Transformed Coordinates: x: %i, y: %i", atp.x, atp.y);
 
     for (Button* b : buttons) {
-        if (b->isPressed(tp->x, tp->y)){
-             ESP_LOGI("UI", "Button pressed: %s on %d, %d", b->get_label().c_str(), tp->x, tp->y);
+        if (b->isPressed(atp.x, atp.y)){
+             ESP_LOGI("UI", "Button pressed: %s on %d, %d", b->get_label().c_str(), atp.x, atp.y);
             return b;
         }
     }
 
     return nullptr;
-}
-
-TouchPoint UiManager::getPressedCoordinates(TouchPoint* tp) {
-    // Coordinates are already transformed by the touch driver
-    return *tp;
 }
 
 Rect UiManager::compute_grid_cell(uint16_t display_width, uint16_t display_height, size_t rows, size_t cols, size_t index) {

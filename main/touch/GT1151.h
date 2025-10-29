@@ -21,7 +21,7 @@ private:
     const uint16_t productId_reg = 0x8140;
     const uint16_t baseCoordinates_address = 0x814E;
     const uint16_t firstCoordinates_address = 0x814F;
-    
+
 public:
     Gt1151();
     ~Gt1151();
@@ -30,10 +30,10 @@ public:
     esp_err_t read_product_id(i2c_master_dev_handle_t *) override;
     void init(i2c_master_dev_handle_t *) override;
     TouchPoint scan(i2c_master_dev_handle_t *) override;
+    uint16_t get_chip_address() override { return chip_address; }
 
-    i2c_device_config_t get_device_config() override;
-    TouchPoint transform_coordinates(const TouchPoint& tp, MIRROR_IMAGE mirror, const Display& display) override;
+    // i2c_device_config_t get_device_config() override;
+    TouchPoint transform_coordinates(const TouchPoint &tp, MIRROR_IMAGE mirror, const Display &display) override;
 };
-
 
 #endif

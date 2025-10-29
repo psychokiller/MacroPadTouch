@@ -74,14 +74,14 @@ extern "C" void app_main(void)
 
     BleKeyboard bleKeyboard("MacroPadTouch");
 
-    TouchDriver *touchDriver = new Gt1151();
-    // TouchDriver* touchDriver = new Icnt86x();
+    // TouchDriver *touchDriver = new Gt1151();
+    TouchDriver* touchDriver = new Icnt86x();
     setup_i2c_configuration(touchDriver);
     touchDriver->init(i2c_dev_handle);
     vTaskDelay(pdMS_TO_TICKS(500));
 
-    WaveShare213 display = WaveShare213();
-    // WaveShare29 display = WaveShare29();
+    // WaveShare213 display = WaveShare213();
+    WaveShare29 display = WaveShare29();
 
     display.init();
     display.clear(BLACK);
@@ -99,7 +99,7 @@ extern "C" void app_main(void)
     clear_screen(BlankDisplayImage, display, WHITE);
     Paint_SetMirroring(MIRROR_ORIGIN);
 
-    UiManager *ui = new UiManager(display, 2, 3);
+    UiManager *ui = new UiManager(display, 2, 3, *touchDriver);
     
     std::vector<Button *> buttons;
 
@@ -132,7 +132,8 @@ extern "C" void app_main(void)
         last_tp = tp;
         tp = touchDriver->scan(i2c_dev_handle);
 
-        TouchPoint aTp = ui->getPressedCoordinates(&tp);
+        TouchPoint aTp = touchDriver->transform_coordinates(tp, MIRROR_ORIGIN, display);
+        // ESP_LOGE("Main", "Transformed Touch Point - X: %d, Y: %d, Size: %d", aTp.x, aTp.y, aTp.size);
         // Keyboard_HandleTouch(aTp.x, aTp.y);
 
         if (tp.size > 0)

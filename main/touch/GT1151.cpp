@@ -70,9 +70,8 @@ TouchPoint Gt1151::transform_coordinates(const TouchPoint& tp, MIRROR_IMAGE mirr
             transformed.y = display.get_height() - tp.y;
             break;
         case MIRROR_ORIGIN:
-            // The most common case based on the current codebase
-            // transformed.x = tp.y;
-            // transformed.y = display.get_width() - tp.x;
+            transformed.x = tp.y;
+            transformed.y = display.get_width() - tp.x;
             break;
     }
     
@@ -117,18 +116,4 @@ TouchPoint Gt1151::scan(i2c_master_dev_handle_t *i2c_dev_handle)
         return *touch;
     }
     return *touch;
-}
-
-i2c_device_config_t Gt1151::get_device_config()
-{
-    // define the configuration for the I2C device
-    // in this case it is the Touch Sensor GT1151N/ICNT86X
-    i2c_device_config_t slave_dev_cnfg = {
-        .dev_addr_length = I2C_ADDR_BIT_LEN_7,
-        .device_address = chip_address,
-        .scl_speed_hz = I2C_FREQ,
-        .flags = {
-            .disable_ack_check = false}};
-
-    return slave_dev_cnfg;
 }

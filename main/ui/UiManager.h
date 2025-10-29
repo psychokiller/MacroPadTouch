@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include "../graphics/Button.h"
 #include "../display/ePaper/Display.h"
+#include "../touch/TouchDriver.h"
 #include <vector>
 
 struct Rect
@@ -17,17 +18,17 @@ struct Rect
 class UiManager
 {
 public:
-    UiManager(Display &display, size_t rows, size_t cols);
+    UiManager(Display &display, size_t rows, size_t cols, TouchDriver &touch_driver);
     ~UiManager();
 
     void draw(std::vector<Button *> &buttons);
     Button *getPressedButton(TouchPoint *tp, std::vector<Button *> &buttons);
-    TouchPoint getPressedCoordinates(TouchPoint *tp);
 
 private:
     Display &display;
     size_t grid_rows;
     size_t grid_cols;
+    TouchDriver &touch_driver;
 
     // Compute cell width/height and return rect for given grid cell.
     Rect compute_grid_cell(uint16_t display_width, uint16_t display_height, size_t rows, size_t cols, size_t index);

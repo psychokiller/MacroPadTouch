@@ -7,12 +7,12 @@ class Icnt86x : public TouchDriver
 {
 private:
     const char *TAG = "Touch_Driver_ICNT86X";
-    const int maxTouchPoints = 10;
+    const int maxTouchPoints = 5;
     const uint16_t chip_address = 0x48;
     const uint16_t productId_reg = 0x000A;
     const uint16_t baseCoordinates_address = 0x1001;
     const uint16_t firstCoordinates_address = 0x1002;
-    
+
 public:
     Icnt86x(/* args */);
     ~Icnt86x();
@@ -21,9 +21,10 @@ public:
     esp_err_t read_product_id(i2c_master_dev_handle_t *) override;
     void init(i2c_master_dev_handle_t *) override;
     TouchPoint scan(i2c_master_dev_handle_t *) override;
+    uint16_t get_chip_address() override { return chip_address; }
 
-    i2c_device_config_t get_device_config() override;
-    TouchPoint transform_coordinates(const TouchPoint& tp, MIRROR_IMAGE mirror, const Display& display) override;
+    // i2c_device_config_t get_device_config() override;
+    TouchPoint transform_coordinates(const TouchPoint &tp, MIRROR_IMAGE mirror, const Display &display) override;
 };
 
 #endif
