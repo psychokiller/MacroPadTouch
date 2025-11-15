@@ -18,10 +18,16 @@ idf_component_register(SRCS "MacroPadTouch.cpp"
                 "bluetooth/BleKeyboard.cpp"
                 "configuration/ButtonConfig.cpp"
                 "graphics/IconLoader.cpp"
-                "services/HttpFileServer.cpp"
-                "ui/OnScreenKeyboard.hpp"
-                "web/HtmlGenerator.hpp"
+                "services/AsyncWebServerManager.cpp"
+                "services/ApStaConfigRouteHandlers.cpp"
+                "services/FileRouteHandlers.cpp"
+                "log_wrap_stub.c"
                 INCLUDE_DIRS "."
-REQUIRES driver esp_timer nvs_flash spiffs esp-nimble-cpp esp_http_server NvsConfigManager WifiManager FileManager
+            PRIV_REQUIRES esp_insights esp_diagnostics
+REQUIRES driver esp_timer nvs_flash spiffs esp-nimble-cpp esp_http_server NvsConfigManager WifiManager FileManager espasyncwebserver 
                 )
 
+target_link_options(${COMPONENT_TARGET} PRIVATE
+    "-Wl,--wrap=esp_log_write"
+    "-Wl,--wrap=esp_log_writev"
+)
