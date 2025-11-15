@@ -11,13 +11,6 @@
 
 static const char *TAG = "ButtonConfigReader";
 
-// Structure to pass data to the task
-typedef struct {
-    std::string filePath;
-    std::vector<ButtonConfig>* buttonConfigs;
-} ParseTaskParams;
-
-// Helper function to split a string by a delimiter
 std::vector<std::string> splitString(const std::string& str, char delimiter) {
     std::vector<std::string> tokens;
     std::string token;
@@ -28,44 +21,42 @@ std::vector<std::string> splitString(const std::string& str, char delimiter) {
     return tokens;
 }
 
-// Task function for parsing CSV
-void parseCsvTask(void *params) {
-    ParseTaskParams* taskParams = (ParseTaskParams*)params;
-    std::string filePath = taskParams->filePath;
-    std::vector<ButtonConfig>* buttonConfigs = taskParams->buttonConfigs;
-
+void ButtonConfigReader::parseCsvTask(void *params) {
+    ButtonConfigReader* reader = (ButtonConfigReader*)params;
+    
     ESP_LOGI(TAG, "Starting CSV parsing task.");
 
-    std::ifstream file(filePath);
+    std::ifstream file(reader->filePath);
     if (!file.is_open()) {
-        ESP_LOGE(TAG, "Failed to open file: %s", filePath.c_str());
-        vTaskDelete(NULL); // Delete the task
+        ESP_LOGE(TAG, "Failed to open file: %s", reader->filePath.c_str());
+        xSemaphoreGive(reader->parsingSemaphore);
+        vTaskDelete(NULL);
         return;
     }
 
-    ESP_LOGI(TAG, "Successfully opened file: %s", filePath.c_str());
+    ESP_LOGI(TAG, "Successfully opened file: %s", reader->filePath.c_str());
 
     std::string line;
-    std::getline(file, line); // Skip the header line
+    std::getline(file, line);
 
     try {
-        buttonConfigs->clear(); // Clear existing configs before parsing
+        reader->buttonConfigs->clear();
 
         while (std::getline(file, line)) {
             std::vector<std::string> tokens = splitString(line, ',');
             if (tokens.size() != 5) {
                 ESP_LOGE(TAG, "Invalid CSV line: %s", line.c_str());
-                continue; // Skip invalid lines
+                continue;
             }
 
             ButtonConfig config;
             config.id = std::stoi(tokens[0]);
             config.label = tokens[1];
             config.iconPath = tokens[2];
-            config.modifier = static_cast<uint8_t>(std::stoi(tokens[3], nullptr, 16)); // Parse as hexadecimal
-            config.keycode = static_cast<uint8_t>(std::stoi(tokens[4], nullptr, 16));  // Parse as hexadecimal
+            config.modifier = static_cast<uint8_t>(std::stoi(tokens[3], nullptr, 16));
+            config.keycode = static_cast<uint8_t>(std::stoi(tokens[4], nullptr, 16));
 
-            buttonConfigs->push_back(config);
+            reader->buttonConfigs->push_back(config);
         }
 
         ESP_LOGI(TAG, "Successfully parsed button configuration CSV file.");
@@ -73,40 +64,65 @@ void parseCsvTask(void *params) {
         ESP_LOGE(TAG, "Exception: %s", e.what());
     }
 
-    vTaskDelete(NULL); // Delete the task when done
+    xSemaphoreGive(reader->parsingSemaphore);
+    vTaskDelete(NULL);
 }
 
 ButtonConfigReader::ButtonConfigReader(const std::string& filePath) : filePath(filePath) {
-    buttonConfigs = new std::vector<ButtonConfig>(); // Allocate buttonConfigs
+    buttonConfigs = new std::vector<ButtonConfig>();
+    parsingSemaphore = xSemaphoreCreateBinary();
+}
 
-    ParseTaskParams* taskParams = new ParseTaskParams();
-    taskParams->filePath = filePath;
-    taskParams->buttonConfigs = buttonConfigs;
+ButtonConfigReader::~ButtonConfigReader() {
+    delete buttonConfigs;
+    vSemaphoreDelete(parsingSemaphore);
+}
 
+void ButtonConfigReader::startReading() {
     BaseType_t result = xTaskCreate(
-        parseCsvTask,           // Task function
-        "CsvParseTask",         // Task name
-        4096,                   // Stack size (adjust as needed)
-        taskParams,             // Task parameters
-        5,                      // Task priority
-        NULL                    // Task handle
+        parseCsvTask,
+        "CsvParseTask",
+        4096,
+        this,
+        5,
+        NULL
     );
 
     if (result != pdPASS) {
         ESP_LOGE(TAG, "Failed to create CSV parsing task.");
-        // Handle error appropriately (e.g., set a flag, use default configs)
-        delete taskParams; // Free memory
-        delete buttonConfigs;
-        buttonConfigs =  nullptr; // Ensure it's a nullptr
     }
 }
 
-ButtonConfigReader::~ButtonConfigReader() {
-    // Cleanup allocated memory
-    delete buttonConfigs;
+bool ButtonConfigReader::waitForCompletion(TickType_t xTicksToWait) {
+    return xSemaphoreTake(parsingSemaphore, xTicksToWait) == pdTRUE;
+}
+
+int ButtonConfigReader::getExpectedButtonCount() {
+    return EXPECTED_BUTTON_COUNT;
 }
 
 std::vector<ButtonConfig> ButtonConfigReader::getButtonConfigs() {
-    // Return a copy to avoid external modification
     return *buttonConfigs;
+}
+
+bool ButtonConfigReader::loadAndRetryUntilComplete() {
+    do {
+        ESP_LOGI(TAG, "Starting to read button configurations...");
+        startReading();
+
+        if (waitForCompletion(portMAX_DELAY)) {
+            ESP_LOGI(TAG, "Configuration reading process finished.");
+            if (getButtonConfigs().size() < getExpectedButtonCount()) {
+                 ESP_LOGW(TAG, "Incomplete button configurations. Expected %d, but got %d. Retrying...",
+                         getExpectedButtonCount(), getButtonConfigs().size());
+                vTaskDelay(pdMS_TO_TICKS(1000));
+            }
+        } else {
+            ESP_LOGE(TAG, "Failed to read button configurations. Retrying...");
+            vTaskDelay(pdMS_TO_TICKS(1000));
+        }
+    } while (getButtonConfigs().size() < getExpectedButtonCount());
+    
+    ESP_LOGI(TAG, "Successfully loaded all button configurations.");
+    return true;
 }
