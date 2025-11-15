@@ -10,7 +10,6 @@
 
 static const char *TAG = "WIFI_MANAGER";
 
-// Default AP settings if NVS is empty
 #define AP_DEFAULT_SSID "MacroPadTouchAccessPoint"
 #define AP_DEFAULT_PASS "Pas$W0rd_123@456+789"
 #define MAX_WIFI_LEN 64
@@ -23,8 +22,6 @@ ESP_EVENT_DEFINE_BASE(APP_EVENTS);
 // Static instance pointer
 WifiManager *WifiManager::m_instance = nullptr;
 
-// --- Public Methods ---
-
 WifiManager &WifiManager::getInstance()
 {
     static NvsConfigManager nvs_manager_instance = NvsConfigManager::getInstance();
@@ -35,7 +32,6 @@ WifiManager &WifiManager::getInstance()
     return *m_instance;
 }
 
-// Private constructor
 WifiManager::WifiManager(NvsConfigManager *nvs_manager) 
     : m_nvs_manager(nvs_manager), 
       m_networks_mutex(xSemaphoreCreateMutex()),
@@ -60,7 +56,6 @@ WifiManager::WifiManager(NvsConfigManager *nvs_manager)
         .nchan = 13,
         .policy = WIFI_COUNTRY_POLICY_AUTO,};
     ESP_ERROR_CHECK(esp_wifi_set_country(&country));
-    // --------------------------------------------------------
 
     // Create the scan task
     xTaskCreate(scan_task, "wifi_scan_task", 4096, this, 5, NULL);
@@ -77,44 +72,50 @@ WifiManager::~WifiManager()
 
 esp_err_t WifiManager::start_apsta()
 {
-    // 1. Create netif instances
     m_sta_netif = esp_netif_create_default_wifi_sta();
     m_ap_netif = esp_netif_create_default_wifi_ap();
-
-    // 2. Set mode
+   
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_APSTA));
 
-    // 3. Configure and start both interfaces
     configure_ap();
-    configure_sta(); // This now only loads NVS, does not connect
+    configure_sta();
 
-    // 4. Start Wi-Fi
     ESP_ERROR_CHECK(esp_wifi_start());
 
     ESP_LOGI(TAG, "Wi-Fi APSTA startup sequence complete. STA connection will be attempted after first scan.");
     return ESP_OK;
 }
 
-// --- Private Helpers ---
+StaStatus WifiManager::get_sta_status() const {
+    StaStatus status;
+    // Lock the critical sections (optional, but good practice)
+    if (xSemaphoreTake(m_networks_mutex, pdMS_TO_TICKS(100)) == pdPASS) {
+        status.is_connected = m_is_sta_connected;
+        // Only return a saved SSID if credentials have been set
+        if (m_has_saved_credentials) {
+            status.saved_ssid = m_sta_ssid;
+        }
+        status.ip_address = m_ip_address;
+        xSemaphoreGive(m_networks_mutex);
+    } else {
+        ESP_LOGE(TAG, "Failed to get mutex for STA status.");
+    }
+    return status;
+}
 
 esp_err_t WifiManager::configure_sta()
 {
     char sta_ssid[MAX_WIFI_LEN + 1] = {0};
     char sta_pass[MAX_WIFI_LEN + 1] = {0};
 
-    // Load STA credentials using the injected NvsConfigManager
     esp_err_t err = m_nvs_manager->load_sta_credentials(sta_ssid, sizeof(sta_ssid), sta_pass, sizeof(sta_pass));
 
     if (err == ESP_OK && sta_ssid[0] != '\0')
     {
-        // Store NVS credentials in member variables
         m_sta_ssid = sta_ssid;
         m_sta_password = sta_pass;
         m_has_saved_credentials = true;
         ESP_LOGI(TAG, "STA credentials loaded for SSID: %s. Connection is deferred.", m_sta_ssid.c_str());
-
-        // *** IMPORTANT: We no longer call esp_wifi_set_config() or esp_wifi_connect() here. ***
-        // *** The connection will be set and triggered conditionally by the scan task. ***
     }
     else
     {
@@ -129,7 +130,6 @@ esp_err_t WifiManager::configure_ap()
     char ap_ssid[MAX_WIFI_LEN + 1] = {0};
     char ap_pass[MAX_WIFI_LEN + 1] = {0};
 
-    // Load AP credentials. Use defaults if NVS fails or credentials are empty.
     if (m_nvs_manager->load_ap_credentials(ap_ssid, sizeof(ap_ssid), ap_pass, sizeof(ap_pass)) != ESP_OK || ap_ssid[0] == '\0')
     {
         strncpy(ap_ssid, AP_DEFAULT_SSID, sizeof(ap_ssid));
@@ -151,14 +151,12 @@ esp_err_t WifiManager::configure_ap()
 
 void WifiManager::check_and_connect_saved_network()
 {
-    // Only proceed if we have credentials and are currently disconnected
     if (!m_has_saved_credentials || m_is_sta_connected) {
         return; 
     }
 
     bool network_found_in_scan = false;
 
-    // Check if the saved network is present in the latest scan results
     if (xSemaphoreTake(m_networks_mutex, pdMS_TO_TICKS(100)) == pdTRUE)
     {
         for (const auto& network : m_networks)
@@ -176,7 +174,6 @@ void WifiManager::check_and_connect_saved_network()
     {
         ESP_LOGI(TAG, "Saved network '%s' found in scan. Configuring and connecting...", m_sta_ssid.c_str());
 
-        // 1. Configure the STA interface with saved credentials
         wifi_config_t sta_config = {};
         strncpy((char *)sta_config.sta.ssid, m_sta_ssid.c_str(), sizeof(sta_config.sta.ssid));
         strncpy((char *)sta_config.sta.password, m_sta_password.c_str(), sizeof(sta_config.sta.password));
@@ -188,7 +185,6 @@ void WifiManager::check_and_connect_saved_network()
             return;
         }
 
-        // 2. Attempt connection now that the network is visible
         esp_err_t err_connect = esp_wifi_connect();
         if (err_connect == ESP_OK) {
              ESP_LOGI(TAG, "STA connect initiated successfully.");
@@ -216,7 +212,6 @@ void WifiManager::scan_networks()
         .coex_background_scan = true, // Enable coexistence background scan for stability
     };
 
-    // Step 1: Start the scan (blocking call due to 'true' argument)
     esp_err_t scan_err = esp_wifi_scan_start(&scan_config, true);
     if (scan_err != ESP_OK)
     {
@@ -227,7 +222,6 @@ void WifiManager::scan_networks()
 
     vTaskDelay(pdMS_TO_TICKS(10));
 
-    // Step 2: Allocate buffer and fetch the actual records
     wifi_ap_record_t *ap_records = new wifi_ap_record_t[MAX_WIFI_SCAN_RESULTS];
     uint16_t ap_count = MAX_WIFI_SCAN_RESULTS;
 
@@ -242,7 +236,6 @@ void WifiManager::scan_networks()
 
     ESP_LOGI(TAG, "Total APs found in scan: %u", ap_count); 
 
-    // Step 3: Update the shared network list
     if (xSemaphoreTake(m_networks_mutex, portMAX_DELAY) == pdTRUE)
     {
         m_networks.clear();
@@ -259,7 +252,6 @@ void WifiManager::scan_networks()
 
     delete[] ap_records;
 
-    // Step 4: Check if we should attempt a connection based on the scan results
     check_and_connect_saved_network();
 }
 
@@ -279,9 +271,6 @@ void WifiManager::scan_task(void *pvParameters)
     WifiManager *wifi_manager = static_cast<WifiManager *>(pvParameters);
     while (true)
     {
-        // Only run scan if we are not currently connected.
-        // If we are disconnected, the conditional connection check will run after the scan.
-        // If we are connected, the scan still runs to update the list of available networks.
         wifi_manager->scan_networks();
         vTaskDelay(pdMS_TO_TICKS(SCAN_INTERVAL_MS));
     }
@@ -289,7 +278,6 @@ void WifiManager::scan_task(void *pvParameters)
 
 // --- Event Handler Delegation ---
 
-// Static method called by C API
 void WifiManager::s_event_handler(void *arg, esp_event_base_t event_base,
                                   int32_t event_id, void *event_data)
 {
@@ -297,7 +285,6 @@ void WifiManager::s_event_handler(void *arg, esp_event_base_t event_base,
     instance->event_handler(event_base, event_id, event_data);
 }
 
-// Instance method (handles events)
 void WifiManager::event_handler(esp_event_base_t event_base, int32_t event_id, void *event_data)
 {
     if (event_base == WIFI_EVENT)
@@ -310,24 +297,18 @@ void WifiManager::event_handler(esp_event_base_t event_base, int32_t event_id, v
         else if (event_id == WIFI_EVENT_STA_START)
         {
             ESP_LOGI(TAG, "Wi-Fi Station started. Deferring connect to scan task...");
-            // *** IMPORTANT CHANGE: No esp_wifi_connect() here. Handled by scan_task. ***
         }
         else if (event_id == WIFI_EVENT_STA_DISCONNECTED)
         {
-            // Set state to disconnected
             m_is_sta_connected = false; 
 
             wifi_event_sta_disconnected_t *event = (wifi_event_sta_disconnected_t *)event_data;
             ESP_LOGE(TAG, "STA Disconnected! Reason: %d", event->reason); 
 
-            // Standard ESP-IDF reconnect logic (highly recommended to keep this for stability)
             ESP_LOGI(TAG, "STA disconnected. Retrying in 2s...");
             vTaskDelay(pdMS_TO_TICKS(2000));
             
-            // Reconnect immediately. The periodic scan will still happen to refresh the network list.
             if (m_has_saved_credentials) {
-                // If credentials are set, the ESP32 connection state machine should try to reconnect.
-                // We keep this behavior to ensure robust reconnection once an initial connection has happened.
                 esp_wifi_connect();
             }
 
@@ -337,11 +318,15 @@ void WifiManager::event_handler(esp_event_base_t event_base, int32_t event_id, v
     else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP)
     {
         ip_event_got_ip_t *event = static_cast<ip_event_got_ip_t *>(event_data);
-        ESP_LOGI(TAG, "STA Got IP: " IPSTR, IP2STR(&event->ip_info.ip));
-        
-        // Set state to connected
-        m_is_sta_connected = true;
 
+        char ip_str[16];
+        snprintf(ip_str, sizeof(ip_str), IPSTR, IP2STR(&event->ip_info.ip));
+        m_ip_address = ip_str;
+        
+        ESP_LOGI(TAG, "STA Got IP: %s", m_ip_address.c_str());
+
+        m_is_sta_connected = true;
+        
         esp_event_post(APP_EVENTS, APP_EVENT_WIFI_STA_CONNECTED, NULL, 0, portMAX_DELAY);
     }
 }

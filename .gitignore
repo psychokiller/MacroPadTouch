@@ -42,3 +42,6 @@ sdkconfig
 dependencies.lock
 
 *.old
+
+managed_components/
+node_modules/

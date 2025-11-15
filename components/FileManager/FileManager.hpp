@@ -11,6 +11,8 @@
 #include <sys/unistd.h>
 #include <cerrno>       // Added for better error logging in delete_file
 #include <dirent.h>     // Added for opendir/readdir
+#include "FS.h" // Ensure this is included (it is, indirectly, in your project)
+#include "SPIFFS.h" // Ensure this is included where FileManager is implemented (likely FileManager.cpp)
 
 /**
  * @brief Manages all file system (SPIFFS) operations as a Singleton, 
@@ -22,6 +24,7 @@ public:
      * @brief Structure to hold file metadata.
      */
     struct FileInfo {
+        std::string name;
         bool exists = false;
         size_t size = 0;
     };
@@ -66,39 +69,7 @@ public:
 
     esp_err_t init_spiffs() {
         ESP_LOGI(TAG, "Initializing SPIFFS...");
-
-        esp_vfs_spiffs_conf_t conf = {
-            .base_path = base_path_.c_str(),
-            .partition_label = partition_label_.c_str(),
-            .max_files = 5,
-            .format_if_mount_failed = true
-        };
-
-        esp_err_t ret = esp_vfs_spiffs_register(&conf);
-
-        if (ret == ESP_ERR_INVALID_STATE) {
-            ESP_LOGW(TAG, "SPIFFS already mounted.");
-            return ESP_OK;
-        }
-        
-        if (ret != ESP_OK) {
-            if (ret == ESP_FAIL) {
-                ESP_LOGE(TAG, "Failed to mount or format SPIFFS");
-            } else if (ret == ESP_ERR_NOT_FOUND) {
-                ESP_LOGE(TAG, "Failed to find SPIFFS partition");
-            } else {
-                ESP_LOGE(TAG, "Failed to initialize SPIFFS (%s)", esp_err_to_name(ret));
-            }
-            return ret;
-        }
-
-        size_t total = 0, used = 0;
-        ret = esp_spiffs_info(partition_label_.c_str(), &total, &used); 
-        if (ret == ESP_OK) {
-            ESP_LOGI(TAG, "SPIFFS mounted. Total: %zu bytes, Used: %zu bytes", total, used);
-        }
-        
-        return ESP_OK;
+        return SPIFFS.begin(true, base_path_.c_str(), 5, partition_label_.c_str()) ? ESP_OK : ESP_FAIL;
     }
 
     // --- File Metadata ---
@@ -121,13 +92,12 @@ public:
     // --- File Listing (NEW) ---
 
     /**
-     * @brief Lists all files present in the SPIFFS partition base path.
-     * @return A vector of strings, where each string is a filename (relative to mount point).
+     * @brief Lists all files present in the SPIFFS partition base path, with their sizes.
+     * @return A vector of FileInfo objects.
      */
-    std::vector<std::string> list_files() {
-        std::vector<std::string> file_list;
-        // Use the base_path_ (e.g., "/spiffs") for opendir
-        DIR* dir = opendir(base_path_.c_str()); 
+    std::vector<FileInfo> list_files_with_size() {
+        std::vector<FileInfo> file_list;
+        DIR* dir = opendir(base_path_.c_str());
         
         if (!dir) {
             ESP_LOGE(TAG, "Failed to open directory: %s", base_path_.c_str());
@@ -135,19 +105,20 @@ public:
         }
 
         struct dirent* entry;
-        // Read directory entries one by one
         while ((entry = readdir(dir)) != NULL) {
-            // Ignore special entries
             if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
                 continue;
             }
             
-            // For flat filesystems like SPIFFS, all entries here should be files.
-            file_list.push_back(entry->d_name);
+            FileInfo info = get_file_info(entry->d_name);
+            if (info.exists) {
+                info.name = entry->d_name;
+                file_list.push_back(info);
+            }
         }
 
         closedir(dir);
-        ESP_LOGI(TAG, "File list retrieved. Found %zu files.", file_list.size());
+        ESP_LOGI(TAG, "File list with sizes retrieved. Found %zu files.", file_list.size());
         return file_list;
     }
 
@@ -242,5 +213,14 @@ public:
             ESP_LOGE(TAG, "Failed to delete file: %s (errno: %d)", full_path.c_str(), errno); 
             return ESP_FAIL;
         }
+    }
+
+    /**
+     * @brief Returns the reference to the mounted filesystem object.
+     * This allows the web server to use the fs::FS& interface without
+     * knowing the specific implementation (SPIFFS, LittleFS, etc.).
+     */
+    fs::FS& get_mounted_fs() {
+        return SPIFFS; 
     }
 };
