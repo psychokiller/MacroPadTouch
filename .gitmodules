@@ -1,0 +1,3 @@
+[submodule "MacroPadTouchWebApp"]
+	path = MacroPadTouchWebApp
+	url = git@github.com:psychokiller/MacroPadTouchWebApp.git
