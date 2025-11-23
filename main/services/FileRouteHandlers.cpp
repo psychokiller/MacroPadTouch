@@ -37,7 +37,10 @@ void handle_download(AsyncWebServerRequest *request) {
     }
     String filename = request->getParam("file")->value();
     FileManager& fm = FileManager::getInstance();
-    String fullPath = String("/spiffs/") + filename; 
+    // The AsyncWebServer file APIs expect a path relative to the mounted FS
+    // (e.g. "/myfile.bin"), not the VFS mount point ("/spiffs/myfile.bin").
+    // Build the FS-relative path here.
+    String fullPath = String("/") + filename; 
 
     FileManager::FileInfo info = fm.get_file_info(filename.c_str());
 
@@ -48,14 +51,14 @@ void handle_download(AsyncWebServerRequest *request) {
 
    ESP_LOGI(FILE_TAG, "Download started for: %s, size: %zu", filename.c_str(), info.size);
     
+    // Let the AsyncFileResponse set download headers by using the download flag.
     AsyncFileResponse* response = new AsyncFileResponse(
         *global_mounted_fs,
         fullPath,
-        "application/octet-stream"
+        "application/octet-stream",
+        true // serve as attachment (adds Content-Disposition)
     );
-    
-    response->addHeader("Content-Disposition", ("attachment; filename=\"" + filename + "\"").c_str());
-    
+
     request->send(response);
 }
 
