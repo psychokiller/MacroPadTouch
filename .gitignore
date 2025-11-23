@@ -45,3 +45,6 @@ dependencies.lock
 
 managed_components/
 node_modules/
+data/web/
+
+spiffs.bin
